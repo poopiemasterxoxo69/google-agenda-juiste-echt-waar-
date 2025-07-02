@@ -47,7 +47,7 @@
 <button onclick="addMultipleEvents()">➕ Voeg toe aan agenda</button>
 
 <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
 <script>
 let tokenClient;
 let accessToken = null;
@@ -61,18 +61,16 @@ async function initializeGapiClient() {
     discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
   });
 }
-window.onload = () => {
-  if (typeof google !== "undefined") {
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
-      scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events',
-      callback: (tokenResponse) => {
-        accessToken = tokenResponse.access_token;
-        document.getElementById("status").innerText = "Ingelogd ✔";
-      },
-    });
-  }
-};
+function gisLoaded() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
+    scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events',
+    callback: (tokenResponse) => {
+      accessToken = tokenResponse.access_token;
+      document.getElementById("status").innerText = "Ingelogd ✔";
+    },
+  });
+}
 function handleAuthClick() {
   if (tokenClient) {
     tokenClient.requestAccessToken();
@@ -80,47 +78,44 @@ function handleAuthClick() {
     alert("Google auth is nog niet geladen.");
   }
 }
+
 function parseTextToEvent(text, heleDag) {
+  const months = {
+    januari:0,februari:1,maart:2,april:3,mei:4,juni:5,juli:6,
+    augustus:7,september:8,oktober:9,november:10,december:11
+  };
+
   const tijd = text.match(/(\d{1,2}):(\d{2})(?:\s*(?:tot|\-|–)\s*(\d{1,2}):(\d{2}))?/);
   let datum = new Date();
-  const dateMatch = text.match(/(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?|(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)/i);
-  if (dateMatch) {
-    if (dateMatch[1] && dateMatch[2]) {
-      const day = parseInt(dateMatch[1]);
-      const month = parseInt(dateMatch[2]) - 1;
-      const year = dateMatch[3] ? parseInt(dateMatch[3]) : new Date().getFullYear();
-      datum = new Date(year, month, day);
-    } else if (dateMatch[4] && dateMatch[5]) {
-      const months = {
-        januari:0,februari:1,maart:2,april:3,mei:4,juni:5,juli:6,
-        augustus:7,september:8,oktober:9,november:10,december:11
-      };
-      const day = parseInt(dateMatch[4]);
-      const month = months[dateMatch[5].toLowerCase()];
-      datum = new Date(new Date().getFullYear(), month, day);
-    }
+  const maandWords = text.match(/(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)/i);
+  const cijfers = text.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+
+  if (maandWords) {
+    const day = parseInt(maandWords[1]);
+    const month = months[maandWords[2].toLowerCase()];
+    datum = new Date(new Date().getFullYear(), month, day);
+  } else if (cijfers) {
+    const day = parseInt(cijfers[1]);
+    const month = parseInt(cijfers[2]) - 1;
+    const year = cijfers[3] ? parseInt(cijfers[3]) : new Date().getFullYear();
+    datum = new Date(year, month, day);
   }
 
-  const title = text.split(/\d{1,2}[:\/]/)[0].trim() || "Gebeurtenis";
+  const title = text.replace(/\d{1,2}[:\/]\d{2}.*/, '').replace(/\d{1,2}[\s\-\/](januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)|\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?/, '').trim() || "Gebeurtenis";
 
   if (heleDag) {
     return {
       summary: title,
       start: { date: datum.toISOString().split('T')[0] },
-      end: { date: new Date(datum.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] }
+      end: { date: new Date(datum.getTime() + 86400000).toISOString().split('T')[0] }
     };
   }
 
   if (!tijd) return null;
-  const startH = parseInt(tijd[1]), startM = parseInt(tijd[2]);
-  const endH = tijd[3] ? parseInt(tijd[3]) : null;
-  const endM = tijd[4] ? parseInt(tijd[4]) : null;
-
-  datum.setHours(startH, startM, 0, 0);
+  const [_, h1, m1, h2, m2] = tijd.map(x => parseInt(x) || 0);
   const startDate = new Date(datum);
-  const endDate = endH !== null
-    ? new Date(datum.getFullYear(), datum.getMonth(), datum.getDate(), endH, endM || 0)
-    : new Date(startDate.getTime() + 30 * 60 * 1000);
+  startDate.setHours(h1, m1, 0, 0);
+  const endDate = h2 ? new Date(datum.getFullYear(), datum.getMonth(), datum.getDate(), h2, m2) : new Date(startDate.getTime() + 30 * 60 * 1000);
 
   return {
     summary: title,
@@ -129,31 +124,32 @@ function parseTextToEvent(text, heleDag) {
   };
 }
 
-async function checkConflict(event) {
-  const params = {
+async function checkConflictWithBuffer(event, bufferMinutes = 30) {
+  const timeMin = new Date(new Date(event.start.dateTime).getTime() - bufferMinutes * 60000).toISOString();
+  const timeMax = new Date(new Date(event.end.dateTime).getTime() + bufferMinutes * 60000).toISOString();
+
+  const response = await gapi.client.calendar.events.list({
     calendarId: 'primary',
-    timeMin: event.start.dateTime || (event.start.date + 'T00:00:00Z'),
-    timeMax: event.end.dateTime || (event.end.date + 'T23:59:59Z'),
+    timeMin,
+    timeMax,
     singleEvents: true
-  };
-  const response = await gapi.client.calendar.events.list(params);
+  });
+
   return response.result.items.length > 0;
 }
 
 async function addEvent(event, kleurId) {
   event.colorId = kleurId;
   try {
-    const hasConflict = await checkConflict(event);
+    const hasConflict = await checkConflictWithBuffer(event, 30);
     if (hasConflict) {
-      if (!confirm(`Er is al een event gepland op ${event.start.date || event.start.dateTime}. Toch toevoegen?`)) {
-        return;
-      }
+      alert(`Niet toegevoegd: er zit minder dan 30 minuten tussen een bestaand event en: ${event.summary}`);
+      return;
     }
-    const request = gapi.client.calendar.events.insert({
+    await gapi.client.calendar.events.insert({
       calendarId: 'primary',
       resource: event,
-    });
-    await request.execute();
+    }).execute();
   } catch (error) {
     console.error(error);
     alert("Fout bij toevoegen van event.");
