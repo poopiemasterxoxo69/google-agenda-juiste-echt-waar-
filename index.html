@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
@@ -27,7 +26,7 @@
 <h1>Agenda Tool</h1>
 <button onclick="handleAuthClick()">Log in met Google</button>
 <p id="status">Niet ingelogd</p>
-<textarea id="inputText" rows="10" placeholder="Bijv: rijles\nmaandag 14:00\nwoensdag 15:00"></textarea>
+<textarea id="inputText" rows="10" placeholder="Bijv: rijles&#10;maandag 14:00&#10;woensdag 15:00"></textarea>
 
 <label for="kleur">Kies kleur:</label>
 <select id="kleur">
@@ -55,17 +54,12 @@ let accessToken = null;
 function gapiLoaded() {
   gapi.load('client', initializeGapiClient);
 }
-
 async function initializeGapiClient() {
   await gapi.client.init({
     apiKey: '',
     discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
   });
-  if (accessToken) {
-    gapi.client.setToken({ access_token: accessToken });
-  }
 }
-
 window.onload = () => {
   if (typeof google !== "undefined") {
     tokenClient = google.accounts.oauth2.initTokenClient({
@@ -73,13 +67,11 @@ window.onload = () => {
       scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events',
       callback: (tokenResponse) => {
         accessToken = tokenResponse.access_token;
-        gapi.client.setToken({ access_token: accessToken });
         document.getElementById("status").innerText = "Ingelogd ✔";
       },
     });
   }
 };
-
 function handleAuthClick() {
   if (tokenClient) {
     tokenClient.requestAccessToken();
@@ -93,6 +85,7 @@ function parseDateTimeFromText(text) {
     maandag:1, dinsdag:2, woensdag:3, donderdag:4, vrijdag:5, zaterdag:6, zondag:0
   };
   const vandaag = new Date();
+
   let datum = new Date();
   const dateMatch = text.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
   const maandMatch = text.match(/(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)/i);
@@ -152,7 +145,7 @@ async function addEvent(event, kleurId) {
     if (conflicts.length > 0) {
       const conflictNames = conflicts.map(e => e.summary).join(", ");
       const tijd = new Date(event.start.dateTime).toLocaleString("nl-NL");
-      if (!confirm(`Er bestaat al een event op ${tijd} (${conflictNames}). Toch toevoegen?`)) return;
+      if (!confirm(Er bestaat al een event op ${tijd} (${conflictNames}). Toch toevoegen?)) return;
     }
     await gapi.client.calendar.events.insert({
       calendarId: 'primary',
@@ -186,6 +179,7 @@ async function addMultipleEvents() {
     const datum = parseDateTimeFromText(regel);
 
     if (datum) {
+      // Als regel een datum bevat, koppel aan huidige titel
       const start = new Date(datum);
       const end = new Date(start.getTime() + 30 * 60 * 1000);
 
@@ -213,12 +207,14 @@ async function addMultipleEvents() {
 
       await addEvent(event, gekozenKleur);
     } else {
+      // Als regel geen datum bevat, dan is het de nieuwe titel
       huidigeTitel = regel;
     }
   }
 
   alert("Alle events verwerkt.");
 }
+
 </script>
 </body>
 </html>
