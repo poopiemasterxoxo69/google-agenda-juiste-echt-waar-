@@ -1,0 +1,81 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Agenda Tool</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    let tokenClient;
+    let accessToken = null;
+
+    function gapiLoaded() {
+      gapi.load('client', initializeGapiClient);
+    }
+
+    async function initializeGapiClient() {
+      await gapi.client.init({
+        apiKey: '',
+        discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
+      });
+    }
+
+    function gisLoaded() {
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: 'VUL_HIER_JE_CLIENT_ID_IN',
+        scope: 'https://www.googleapis.com/auth/calendar.events',
+        callback: (tokenResponse) => {
+          accessToken = tokenResponse.access_token;
+          document.getElementById("status").innerText = "Ingelogd ✔";
+        },
+      });
+    }
+
+    function handleAuthClick() {
+      tokenClient.requestAccessToken();
+    }
+
+    async function addEvent() {
+      if (!accessToken) {
+        alert("Log eerst in met Google.");
+        return;
+      }
+      const text = document.getElementById("inputText").value;
+      const now = new Date();
+      const event = {
+        summary: text,
+        start: {
+          dateTime: new Date(now.getTime() + 60 * 60 * 1000).toISOString(),
+          timeZone: 'Europe/Amsterdam',
+        },
+        end: {
+          dateTime: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+          timeZone: 'Europe/Amsterdam',
+        },
+      };
+
+      try {
+        const request = gapi.client.calendar.events.insert({
+          calendarId: 'primary',
+          resource: event,
+        });
+        await request.execute();
+        alert("Event toegevoegd!");
+      } catch (error) {
+        console.error(error);
+        alert("Fout bij toevoegen van event.");
+      }
+    }
+  </script>
+</head>
+<body onload="gapiLoaded();">
+  <h1>Agenda Tool</h1>
+  <button onclick="handleAuthClick()">Log in met Google</button>
+  <p id="status">Niet ingelogd</p>
+  <textarea id="inputText" rows="4" cols="50" placeholder="Bijv: kapper maandag 14:00"></textarea><br>
+  <button onclick="addEvent()">Voeg toe aan agenda</button>
+
+  <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
+  <script onload="gisLoaded()" async defer></script>
+</body>
+</html>
