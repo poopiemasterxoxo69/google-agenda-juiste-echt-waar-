@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html>
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Agenda Tool</title>
   <style>
     body {
       font-family: sans-serif;
-      background: #f5f5f5;
+      background-color: #f5f5f5;
       max-width: 700px;
       margin: auto;
       padding: 20px;
@@ -14,167 +14,205 @@
     h1 { text-align: center; }
     textarea, select, button {
       width: 100%;
+      margin-top: 10px;
       font-size: 16px;
       padding: 10px;
-      margin-top: 10px;
     }
-    #tijdselectie { display: flex; gap: 10px; margin: 10px 0; }
+    #kleur, #heleDagContainer {
+      margin-bottom: 20px;
+    }
   </style>
 </head>
 <body>
-  <h1>Agenda Tool</h1>
-  <button onclick="handleAuthClick()">Log in met Google</button>
-  <p id="status">Niet ingelogd</p>
-  <textarea id="inputText" rows="8" placeholder="Voorbeeld:\nkapper donderdag 15:00\nrijles\nmaandag 14:00\nwoensdag 14:00\nvrijdag 15:15"></textarea>
+<h1>Agenda Tool</h1>
+<button onclick="handleAuthClick()">Log in met Google</button>
+<p id="status">Niet ingelogd</p>
+<textarea id="inputText" rows="10" placeholder="Bijv: rijles&#10;maandag 14:00&#10;woensdag 15:00"></textarea>
 
-  <label for="kleur">Kies kleur:</label>
-  <select id="kleur">
-    <option value="random" selected>🎲 Willekeurig</option>
-    <option value="11">❤️ Rood</option><option value="6">🟧 Oranje</option>
-    <option value="5">💛 Geel</option><option value="10">💚 Donkergroen</option>
-    <option value="2">💚 Lichtgroen</option><option value="9">💙 Blauw</option>
-    <option value="7">🫐 Bosbes</option><option value="3">💜 Lavendel</option>
-    <option value="4">🍇 Paars</option><option value="1">💗 Roze</option>
-    <option value="8">⚫ Grijs</option>
-  </select>
+<label for="kleur">Kies kleur:</label>
+<select id="kleur">
+  <option value="random" selected>🎲 Willekeurig</option>
+  <option value="11">❤️ Rood</option><option value="6">🟧 Oranje</option>
+  <option value="5">💛 Geel</option><option value="10">💚 Donkergroen</option>
+  <option value="2">💚 Lichtgroen</option><option value="9">💙 Blauw</option>
+  <option value="7">🫐 Bosbes</option><option value="3">💜 Lavendel</option>
+  <option value="4">🍇 Paars</option><option value="1">💗 Roze</option>
+  <option value="8">⚫ Grijs</option>
+</select>
 
-  <button onclick="addMultipleEvents()">➕ Voeg toe aan agenda</button>
+<div id="heleDagContainer">
+  <label><input type="checkbox" id="heleDag"> Hele dag</label>
+</div>
 
-  <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script>
-    let accessToken = null;
-    let tokenClient;
+<button onclick="addMultipleEvents()">➕ Voeg toe aan agenda</button>
 
-    function gapiLoaded() {
-      gapi.load('client', async () => {
-        await gapi.client.init({
-          apiKey: '',
-          discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
-        });
-      });
+<script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+let tokenClient;
+let accessToken = null;
+
+function gapiLoaded() {
+  gapi.load('client', initializeGapiClient);
+}
+async function initializeGapiClient() {
+  await gapi.client.init({
+    apiKey: '',
+    discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
+  });
+}
+window.onload = () => {
+  if (typeof google !== "undefined") {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
+      scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events',
+      callback: (tokenResponse) => {
+        accessToken = tokenResponse.access_token;
+        document.getElementById("status").innerText = "Ingelogd ✔";
+      },
+    });
+  }
+};
+function handleAuthClick() {
+  if (tokenClient) {
+    tokenClient.requestAccessToken();
+  } else {
+    alert("Google auth is nog niet geladen.");
+  }
+}
+
+function parseInputToEvents(text) {
+  const regels = text.split(/\n+/).map(r => r.trim()).filter(r => r);
+  const maanden = {
+    januari:0,februari:1,maart:2,april:3,mei:4,juni:5,juli:6,
+    augustus:7,september:8,oktober:9,november:10,december:11
+  };
+  const dagen = ["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
+  const events = [];
+  let huidigeTitel = "";
+  const nu = new Date();
+
+  for (const regel of regels) {
+    const match1 = regel.match(/(.+?)\s+(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag)\s+(\d{1,2}:\d{2})/i);
+    const match2 = regel.match(/(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag)\s+(\d{1,2}:\d{2})/i);
+    const match3 = regel.match(/^(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\s+(\d{1,2}:\d{2})/);
+    const match4 = regel.match(/^(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\s+(\d{1,2}:\d{2})/i);
+
+    let datum = null;
+    let tijd = null;
+
+    if (match1) {
+      huidigeTitel = match1[1].trim();
+      const dag = dagen.indexOf(match1[2].toLowerCase());
+      tijd = match1[3];
+      datum = new Date(nu);
+      const diff = (dag - datum.getDay() + 7) % 7 || 7;
+      datum.setDate(datum.getDate() + diff);
+    } else if (match2) {
+      const dag = dagen.indexOf(match2[1].toLowerCase());
+      tijd = match2[2];
+      datum = new Date(nu);
+      const diff = (dag - datum.getDay() + 7) % 7 || 7;
+      datum.setDate(datum.getDate() + diff);
+    } else if (match3) {
+      const day = parseInt(match3[1]);
+      const month = parseInt(match3[2]) - 1;
+      const year = match3[3] ? parseInt(match3[3]) : nu.getFullYear();
+      tijd = match3[4];
+      datum = new Date(year, month, day);
+    } else if (match4) {
+      const day = parseInt(match4[1]);
+      const month = maanden[match4[2].toLowerCase()];
+      tijd = match4[3];
+      datum = new Date(nu.getFullYear(), month, day);
+    } else if (!regel.match(/\d/)) {
+      huidigeTitel = regel;
     }
 
-    window.onload = () => {
-      if (typeof google !== "undefined") {
-        tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
-          scope: 'https://www.googleapis.com/auth/calendar.events',
-          callback: (tokenResponse) => {
-            accessToken = tokenResponse.access_token;
-            document.getElementById("status").innerText = "Ingelogd ✔";
-          },
-        });
-      }
-    };
-
-    function handleAuthClick() {
-      if (tokenClient) {
-        tokenClient.requestAccessToken();
-      } else {
-        alert("Google auth is nog niet geladen.");
-      }
+    if (datum && tijd && huidigeTitel) {
+      const [h, m] = tijd.split(":").map(Number);
+      datum.setHours(h, m, 0, 0);
+      events.push({ title: huidigeTitel, start: new Date(datum) });
     }
+  }
 
-    const dagen = ["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
+  return events;
+}
 
-    function volgendeDagDatum(vanaf, dagnaam) {
-      const doel = dagen.indexOf(dagnaam.toLowerCase());
-      if (doel === -1) return null;
-      const diff = (doel + 7 - vanaf.getDay()) % 7 || 7;
-      const result = new Date(vanaf);
-      result.setDate(result.getDate() + diff);
-      return result;
+async function checkConflict(event) {
+  const params = {
+    calendarId: 'primary',
+    timeMin: event.start.dateTime,
+    timeMax: event.end.dateTime,
+    singleEvents: true
+  };
+  const response = await gapi.client.calendar.events.list(params);
+  const conflicts = response.result.items.filter(item => {
+    const startA = new Date(event.start.dateTime);
+    const endA = new Date(event.end.dateTime);
+    const startB = new Date(item.start.dateTime);
+    const endB = new Date(item.end.dateTime);
+    return (startA < endB) && (endA > startB);
+  });
+  return conflicts;
+}
+
+async function addEvent(event, kleurId) {
+  event.colorId = kleurId;
+  try {
+    const conflicts = await checkConflict(event);
+    if (conflicts.length > 0) {
+      const conflictNames = conflicts.map(e => e.summary).join(", ");
+      const tijd = new Date(event.start.dateTime).toLocaleString("nl-NL");
+      if (!confirm(`Er is al een event op ${tijd} (${conflictNames}). Toch toevoegen?`)) return;
     }
+    await gapi.client.calendar.events.insert({
+      calendarId: 'primary',
+      resource: event,
+    }).execute();
+  } catch (e) {
+    console.error(e);
+    alert("Fout bij toevoegen.");
+  }
+}
 
-    function parseInput(text) {
-      const regels = text.trim().split(/\n+/);
-      const events = [];
-      let currentTitle = "";
-      for (let regel of regels) {
-        regel = regel.trim();
-        if (regel === "") continue;
+async function addMultipleEvents() {
+  if (!accessToken) {
+    alert("Log eerst in.");
+    return;
+  }
 
-        // Titel + datum+tijd in één regel
-        const combinedMatch = regel.match(/(.+?)\s+(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag)\s+(\d{1,2}:\d{2})/i);
-        if (combinedMatch) {
-          currentTitle = combinedMatch[1].trim();
-          const dag = combinedMatch[2].toLowerCase();
-          const tijd = combinedMatch[3];
-          events.push({ title: currentTitle, dag, tijd });
-          continue;
-        }
+  const heleDag = document.getElementById("heleDag").checked;
+  const kleuren = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"];
+  const gekozenKleur = document.getElementById("kleur").value === "random"
+    ? kleuren[Math.floor(Math.random() * kleuren.length)]
+    : document.getElementById("kleur").value;
 
-        // Alleen titel
-        if (regel.match(/^[a-zA-Z\s]+$/) && !regel.match(/\d/)) {
-          currentTitle = regel.trim();
-          continue;
-        }
+  const events = parseInputToEvents(document.getElementById("inputText").value);
 
-        // Alleen dag + tijd
-        const tijdmatch = regel.match(/(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag)\s+(\d{1,2}:\d{2})/i);
-        if (tijdmatch && currentTitle) {
-          const dag = tijdmatch[1].toLowerCase();
-          const tijd = tijdmatch[2];
-          events.push({ title: currentTitle, dag, tijd });
-        }
-      }
-      return events;
-    }
+  for (const ev of events) {
+    const start = ev.start;
+    const end = heleDag
+      ? new Date(start.getTime() + 86400000)
+      : new Date(start.getTime() + 30 * 60 * 1000);
 
-    async function checkConflict(startISO, endISO) {
-      const res = await gapi.client.calendar.events.list({
-        calendarId: 'primary',
-        timeMin: startISO,
-        timeMax: endISO,
-        singleEvents: true
-      });
-      return res.result.items.length ? res.result.items : null;
-    }
-
-    async function addMultipleEvents() {
-      if (!accessToken) {
-        alert("Log eerst in met Google.");
-        return;
-      }
-
-      const kleur = document.getElementById("kleur").value;
-      const kleuren = ["1","2","3","4","5","6","7","8","9","10","11"];
-      const gekozenKleur = kleur === "random" ? kleuren[Math.floor(Math.random() * kleuren.length)] : kleur;
-
-      const input = document.getElementById("inputText").value;
-      const eventData = parseInput(input);
-      const now = new Date();
-
-      for (const ev of eventData) {
-        const datum = volgendeDagDatum(now, ev.dag);
-        const [h, m] = ev.tijd.split(":").map(Number);
-        datum.setHours(h, m, 0, 0);
-        const start = new Date(datum);
-        const end = new Date(start.getTime() + 30 * 60 * 1000);
-
-        const conflict = await checkConflict(start.toISOString(), end.toISOString());
-        if (conflict) {
-          const conflictnamen = conflict.map(e => e.summary).join(", ");
-          const doorgaan = confirm(`⚠️ Er is al een event (${conflictnamen}) op ${start.toLocaleString()}. Toch toevoegen?`);
-          if (!doorgaan) continue;
-        }
-
-        const nieuwEvent = {
+    const event = heleDag
+      ? {
           summary: ev.title,
-          start: { dateTime: start.toISOString(), timeZone: 'Europe/Amsterdam' },
-          end: { dateTime: end.toISOString(), timeZone: 'Europe/Amsterdam' },
-          colorId: gekozenKleur
+          start: { date: start.toISOString().split("T")[0] },
+          end: { date: end.toISOString().split("T")[0] },
+        }
+      : {
+          summary: ev.title,
+          start: { dateTime: start.toISOString(), timeZone: "Europe/Amsterdam" },
+          end: { dateTime: end.toISOString(), timeZone: "Europe/Amsterdam" },
         };
 
-        await gapi.client.calendar.events.insert({
-          calendarId: 'primary',
-          resource: nieuwEvent
-        });
-      }
+    await addEvent(event, gekozenKleur);
+  }
 
-      alert("✅ Toegevoegd aan agenda!");
-    }
-  </script>
+  alert("✅ Events toegevoegd!");
+}
+</script>
 </body>
 </html>
