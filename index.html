@@ -3,7 +3,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Agenda Tool</title>
+  <title>Agenda Tool met Parser</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
     let tokenClient;
@@ -22,7 +22,7 @@
 
     function gisLoaded() {
       tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: 'VUL_HIER_JE_CLIENT_ID_IN',
+        client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
         scope: 'https://www.googleapis.com/auth/calendar.events',
         callback: (tokenResponse) => {
           accessToken = tokenResponse.access_token;
@@ -35,24 +35,68 @@
       tokenClient.requestAccessToken();
     }
 
+    // Parser: zet tekst zoals "kapper maandag 14:00" om naar een event object
+    function parseTextToEvent(text) {
+      const dagen = {
+        'maandag': 1,
+        'dinsdag': 2,
+        'woensdag': 3,
+        'donderdag': 4,
+        'vrijdag': 5,
+        'zaterdag': 6,
+        'zondag': 0
+      };
+
+      let foundDay = null;
+      for (let dag in dagen) {
+        if (text.toLowerCase().includes(dag)) {
+          foundDay = dagen[dag];
+          break;
+        }
+      }
+      if (foundDay === null) {
+        alert("Geen geldige dag gevonden in de tekst.");
+        return null;
+      }
+
+      const timeMatch = text.match(/(\d{1,2}):(\d{2})/);
+      if (!timeMatch) {
+        alert("Geen tijd gevonden in de tekst.");
+        return null;
+      }
+
+      const hour = parseInt(timeMatch[1]);
+      const minute = parseInt(timeMatch[2]);
+
+      // Bepaal volgende datum voor die dag
+      const now = new Date();
+      const resultDate = new Date(now);
+      resultDate.setDate(now.getDate() + ((7 + foundDay - now.getDay()) % 7 || 7));
+      resultDate.setHours(hour, minute, 0, 0);
+
+      const endDate = new Date(resultDate.getTime() + 60 * 60 * 1000);
+
+      return {
+        summary: text,
+        start: {
+          dateTime: resultDate.toISOString(),
+          timeZone: 'Europe/Amsterdam',
+        },
+        end: {
+          dateTime: endDate.toISOString(),
+          timeZone: 'Europe/Amsterdam',
+        },
+      };
+    }
+
     async function addEvent() {
       if (!accessToken) {
         alert("Log eerst in met Google.");
         return;
       }
       const text = document.getElementById("inputText").value;
-      const now = new Date();
-      const event = {
-        summary: text,
-        start: {
-          dateTime: new Date(now.getTime() + 60 * 60 * 1000).toISOString(),
-          timeZone: 'Europe/Amsterdam',
-        },
-        end: {
-          dateTime: new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString(),
-          timeZone: 'Europe/Amsterdam',
-        },
-      };
+      const event = parseTextToEvent(text);
+      if (!event) return;
 
       try {
         const request = gapi.client.calendar.events.insert({
@@ -69,7 +113,7 @@
   </script>
 </head>
 <body onload="gapiLoaded();">
-  <h1>Agenda Tool</h1>
+  <h1>Agenda Tool (met Parser)</h1>
   <button onclick="handleAuthClick()">Log in met Google</button>
   <p id="status">Niet ingelogd</p>
   <textarea id="inputText" rows="4" cols="50" placeholder="Bijv: kapper maandag 14:00"></textarea><br>
