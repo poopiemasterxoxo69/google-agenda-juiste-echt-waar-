@@ -27,7 +27,7 @@
 <h1>Agenda Tool</h1>
 <button onclick="handleAuthClick()">Log in met Google</button>
 <p id="status">Niet ingelogd</p>
-<textarea id="inputText" rows="6" placeholder="Bijv: kapper 5 juli 14:00&#10;vergadering 14:00 op 5/7"></textarea>
+<textarea id="inputText" rows="10" placeholder="Bijv: rijles&#10;maandag 14:00&#10;woensdag 15:00"></textarea>
 
 <label for="kleur">Kies kleur:</label>
 <select id="kleur">
@@ -47,7 +47,7 @@
 <button onclick="addMultipleEvents()">➕ Voeg toe aan agenda</button>
 
 <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
-<script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 let tokenClient;
 let accessToken = null;
@@ -61,16 +61,18 @@ async function initializeGapiClient() {
     discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
   });
 }
-function gisLoaded() {
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
-    scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events',
-    callback: (tokenResponse) => {
-      accessToken = tokenResponse.access_token;
-      document.getElementById("status").innerText = "Ingelogd ✔";
-    },
-  });
-}
+window.onload = () => {
+  if (typeof google !== "undefined") {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
+      scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events',
+      callback: (tokenResponse) => {
+        accessToken = tokenResponse.access_token;
+        document.getElementById("status").innerText = "Ingelogd ✔";
+      },
+    });
+  }
+};
 function handleAuthClick() {
   if (tokenClient) {
     tokenClient.requestAccessToken();
@@ -79,100 +81,128 @@ function handleAuthClick() {
   }
 }
 
-function parseTextToEvent(text, heleDag) {
-  const months = {
-    januari:0,februari:1,maart:2,april:3,mei:4,juni:5,juli:6,
-    augustus:7,september:8,oktober:9,november:10,december:11
+function parseDateTimeFromText(text) {
+  const dagen = {
+    maandag:1, dinsdag:2, woensdag:3, donderdag:4, vrijdag:5, zaterdag:6, zondag:0
   };
+  const vandaag = new Date();
 
-  const tijd = text.match(/(\d{1,2}):(\d{2})(?:\s*(?:tot|\-|–)\s*(\d{1,2}):(\d{2}))?/);
   let datum = new Date();
-  const maandWords = text.match(/(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)/i);
-  const cijfers = text.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
-
-  if (maandWords) {
-    const day = parseInt(maandWords[1]);
-    const month = months[maandWords[2].toLowerCase()];
-    datum = new Date(new Date().getFullYear(), month, day);
-  } else if (cijfers) {
-    const day = parseInt(cijfers[1]);
-    const month = parseInt(cijfers[2]) - 1;
-    const year = cijfers[3] ? parseInt(cijfers[3]) : new Date().getFullYear();
-    datum = new Date(year, month, day);
-  }
-
-  const title = text.replace(/\d{1,2}[:\/]\d{2}.*/, '').replace(/\d{1,2}[\s\-\/](januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)|\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?/, '').trim() || "Gebeurtenis";
-
-  if (heleDag) {
-    return {
-      summary: title,
-      start: { date: datum.toISOString().split('T')[0] },
-      end: { date: new Date(datum.getTime() + 86400000).toISOString().split('T')[0] }
-    };
-  }
+  const dateMatch = text.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+  const maandMatch = text.match(/(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)/i);
+  const weekdagMatch = text.match(/(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag)/i);
+  const tijd = text.match(/(\d{1,2}):(\d{2})/);
 
   if (!tijd) return null;
-  const [_, h1, m1, h2, m2] = tijd.map(x => parseInt(x) || 0);
-  const startDate = new Date(datum);
-  startDate.setHours(h1, m1, 0, 0);
-  const endDate = h2 ? new Date(datum.getFullYear(), datum.getMonth(), datum.getDate(), h2, m2) : new Date(startDate.getTime() + 30 * 60 * 1000);
 
-  return {
-    summary: title,
-    start: { dateTime: startDate.toISOString(), timeZone: 'Europe/Amsterdam' },
-    end: { dateTime: endDate.toISOString(), timeZone: 'Europe/Amsterdam' }
-  };
+  if (dateMatch) {
+    const day = parseInt(dateMatch[1]), month = parseInt(dateMatch[2]) - 1;
+    const year = dateMatch[3] ? parseInt(dateMatch[3]) : vandaag.getFullYear();
+    datum = new Date(year, month, day);
+  } else if (maandMatch) {
+    const months = {
+      januari:0,februari:1,maart:2,april:3,mei:4,juni:5,juli:6,
+      augustus:7,september:8,oktober:9,november:10,december:11
+    };
+    const day = parseInt(maandMatch[1]);
+    const month = months[maandMatch[2].toLowerCase()];
+    datum = new Date(vandaag.getFullYear(), month, day);
+  } else if (weekdagMatch) {
+    const targetDay = dagen[weekdagMatch[1].toLowerCase()];
+    const vandaagDag = vandaag.getDay();
+    const verschil = (targetDay - vandaagDag + 7) % 7;
+    datum = new Date();
+    datum.setDate(vandaag.getDate() + verschil);
+  } else {
+    return null;
+  }
+
+  datum.setHours(parseInt(tijd[1]), parseInt(tijd[2]), 0, 0);
+  return datum;
 }
 
-async function checkConflictWithBuffer(event, bufferMinutes = 30) {
-  const timeMin = new Date(new Date(event.start.dateTime).getTime() - bufferMinutes * 60000).toISOString();
-  const timeMax = new Date(new Date(event.end.dateTime).getTime() + bufferMinutes * 60000).toISOString();
-
-  const response = await gapi.client.calendar.events.list({
+async function checkConflict(event) {
+  const params = {
     calendarId: 'primary',
-    timeMin,
-    timeMax,
+    timeMin: event.start.dateTime || (event.start.date + 'T00:00:00Z'),
+    timeMax: event.end.dateTime || (event.end.date + 'T23:59:59Z'),
     singleEvents: true
+  };
+  const response = await gapi.client.calendar.events.list(params);
+  const conflicts = response.result.items.filter(item => {
+    const startA = new Date(event.start.dateTime);
+    const endA = new Date(event.end.dateTime);
+    const startB = new Date(item.start.dateTime);
+    const endB = new Date(item.end.dateTime);
+    return (startA < endB) && (endA > startB);
   });
-
-  return response.result.items.length > 0;
+  return conflicts;
 }
 
 async function addEvent(event, kleurId) {
   event.colorId = kleurId;
   try {
-    const hasConflict = await checkConflictWithBuffer(event, 30);
-    if (hasConflict) {
-      alert(`Niet toegevoegd: er zit minder dan 30 minuten tussen een bestaand event en: ${event.summary}`);
-      return;
+    const conflicts = await checkConflict(event);
+    if (conflicts.length > 0) {
+      const conflictNames = conflicts.map(e => e.summary).join(", ");
+      const tijd = new Date(event.start.dateTime).toLocaleString("nl-NL");
+      if (!confirm(`Er bestaat al een event op ${tijd} (${conflictNames}). Toch toevoegen?`)) return;
     }
     await gapi.client.calendar.events.insert({
       calendarId: 'primary',
       resource: event,
     }).execute();
-  } catch (error) {
-    console.error(error);
-    alert("Fout bij toevoegen van event.");
+  } catch (e) {
+    console.error(e);
+    alert("Fout bij toevoegen.");
   }
 }
 
 async function addMultipleEvents() {
   if (!accessToken) {
-    alert("Log eerst in met Google.");
+    alert("Log eerst in.");
     return;
   }
-  const kleuren = ["1","2","3","4","5","6","7","8","9","10","11"];
-  const kleurSelect = document.getElementById("kleur");
-  const gekozen = kleurSelect.value === "random" ? kleuren[Math.floor(Math.random() * kleuren.length)] : kleurSelect.value;
-  const heleDag = document.getElementById("heleDag").checked;
 
-  const lines = document.getElementById("inputText").value.split("\n");
-  for (const line of lines) {
-    if (line.trim() === "") continue;
-    const event = parseTextToEvent(line.trim(), heleDag);
-    if (event) await addEvent(event, gekozen);
+  const lijnen = document.getElementById("inputText").value.split("\n").map(l => l.trim()).filter(l => l);
+  const heleDag = document.getElementById("heleDag").checked;
+  const kleuren = ["1","2","3","4","5","6","7","8","9","10","11"];
+  const gekozenKleur = document.getElementById("kleur").value === "random"
+    ? kleuren[Math.floor(Math.random() * kleuren.length)]
+    : document.getElementById("kleur").value;
+
+  let huidigeTitel = "";
+  for (const regel of lijnen) {
+    const datum = parseDateTimeFromText(regel);
+    if (!datum) {
+      huidigeTitel = regel;
+      continue;
+    }
+
+    const start = new Date(datum);
+    const end = new Date(start.getTime() + 30 * 60 * 1000);
+
+    const titel = huidigeTitel || "Gebeurtenis";
+    const datumStr = start.toLocaleDateString("nl-NL", { day: 'numeric', month: 'long' });
+    const tijdStr = start.toLocaleTimeString("nl-NL", { hour: '2-digit', minute: '2-digit' });
+    const eventTitle = `${titel}`;
+
+    const event = heleDag
+      ? {
+          summary: eventTitle,
+          start: { date: start.toISOString().split('T')[0] },
+          end: { date: new Date(start.getTime() + 86400000).toISOString().split('T')[0] }
+        }
+      : {
+          summary: eventTitle,
+          start: { dateTime: start.toISOString(), timeZone: 'Europe/Amsterdam' },
+          end: { dateTime: end.toISOString(), timeZone: 'Europe/Amsterdam' }
+        };
+
+    await addEvent(event, gekozenKleur);
   }
-  alert("Klaar! Alle events verwerkt.");
+
+  alert("Alle events verwerkt.");
 }
 </script>
 </body>
