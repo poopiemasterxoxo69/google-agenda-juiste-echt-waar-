@@ -4,8 +4,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Agenda Tool met Parser</title>
-  <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
-
   <script>
     let tokenClient;
     let accessToken = null;
@@ -33,10 +31,13 @@
     }
 
     function handleAuthClick() {
+      if (!tokenClient) {
+        alert("Google Auth client is nog niet klaar. Probeer opnieuw over 5 seconden.");
+        return;
+      }
       tokenClient.requestAccessToken();
     }
 
-    // Parser: zet tekst zoals "kapper maandag 14:00" om naar een event object
     function parseTextToEvent(text) {
       const dagen = {
         'maandag': 1,
@@ -69,7 +70,6 @@
       const hour = parseInt(timeMatch[1]);
       const minute = parseInt(timeMatch[2]);
 
-      // Bepaal volgende datum voor die dag
       const now = new Date();
       const resultDate = new Date(now);
       resultDate.setDate(now.getDate() + ((7 + foundDay - now.getDay()) % 7 || 7));
@@ -113,14 +113,14 @@
     }
   </script>
 </head>
-<body onload="gapiLoaded();">
-  <h1>Agenda Tooool (met Pagfdgfdgdfgfgrser)</h1>
+<body>
+  <h1>Agenda Tool (met Parser)</h1>
   <button onclick="handleAuthClick()">Log in met Google</button>
   <p id="status">Niet ingelogd</p>
   <textarea id="inputText" rows="4" cols="50" placeholder="Bijv: kapper maandag 14:00"></textarea><br>
   <button onclick="addEvent()">Voeg toe aan agenda</button>
 
   <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
-  <script onload="gisLoaded()" async defer></script>
+  <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
 </body>
 </html>
