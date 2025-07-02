@@ -1,9 +1,9 @@
-
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <title>Agenda Tool met Parser</title>
+  <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
   <script>
     let tokenClient;
     let accessToken = null;
@@ -31,56 +31,68 @@
     }
 
     function handleAuthClick() {
-      if (!tokenClient) {
-        alert("Google Auth client is nog niet klaar. Probeer opnieuw over 5 seconden.");
-        return;
-      }
       tokenClient.requestAccessToken();
     }
 
+    // Parser: zet tekst zoals "kapper maandag 14:00" of "kapper 17:00 tot 19:00" om naar een event object
     function parseTextToEvent(text) {
       const dagen = {
-        'maandag': 1,
-        'dinsdag': 2,
-        'woensdag': 3,
-        'donderdag': 4,
-        'vrijdag': 5,
-        'zaterdag': 6,
-        'zondag': 0
+        'zondag': 0, 'maandag': 1, 'dinsdag': 2, 'woensdag': 3,
+        'donderdag': 4, 'vrijdag': 5, 'zaterdag': 6
       };
 
-      let foundDay = null;
-      for (let dag in dagen) {
-        if (text.toLowerCase().includes(dag)) {
-          foundDay = dagen[dag];
-          break;
+      const dateRegex = /(?:(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?)/;
+      const dayMatch = Object.keys(dagen).find(d => text.toLowerCase().includes(d));
+      const dateMatch = text.match(dateRegex);
+
+      let startTime, endTime;
+      const timeRangeMatch = text.match(/(\d{1,2}):(\d{2})\s*(?:tot|\-)?\s*(\d{1,2}):(\d{2})/);
+      if (timeRangeMatch) {
+        startTime = { h: parseInt(timeRangeMatch[1]), m: parseInt(timeRangeMatch[2]) };
+        endTime = { h: parseInt(timeRangeMatch[3]), m: parseInt(timeRangeMatch[4]) };
+      } else {
+        const timeMatch = text.match(/(\d{1,2}):(\d{2})/);
+        if (!timeMatch) {
+          alert("Geen tijd gevonden in de tekst.");
+          return null;
         }
+        startTime = { h: parseInt(timeMatch[1]), m: parseInt(timeMatch[2]) };
+        endTime = null;
       }
-      if (foundDay === null) {
-        alert("Geen geldige dag gevonden in de tekst.");
+
+      let eventDate = new Date();
+      if (dayMatch) {
+        const targetDay = dagen[dayMatch];
+        const now = new Date();
+        const dayDiff = (7 + targetDay - now.getDay()) % 7 || 7;
+        eventDate.setDate(now.getDate() + dayDiff);
+      } else if (dateMatch) {
+        const [_, d, m, y] = dateMatch;
+        const year = y ? parseInt(y) : new Date().getFullYear();
+        eventDate = new Date(year, parseInt(m) - 1, parseInt(d));
+      } else {
+        // geen dag of datum gevonden
+        alert("Geen geldige dag of datum gevonden.");
         return null;
       }
 
-      const timeMatch = text.match(/(\d{1,2}):(\d{2})/);
-      if (!timeMatch) {
-        alert("Geen tijd gevonden in de tekst.");
-        return null;
+      eventDate.setHours(startTime.h, startTime.m, 0, 0);
+      const startDate = new Date(eventDate);
+      let endDate;
+      if (endTime) {
+        endDate = new Date(eventDate);
+        endDate.setHours(endTime.h, endTime.m);
+      } else {
+        endDate = new Date(startDate.getTime() + 30 * 60 * 1000); // standaard 30 minuten
       }
 
-      const hour = parseInt(timeMatch[1]);
-      const minute = parseInt(timeMatch[2]);
-
-      const now = new Date();
-      const resultDate = new Date(now);
-      resultDate.setDate(now.getDate() + ((7 + foundDay - now.getDay()) % 7 || 7));
-      resultDate.setHours(hour, minute, 0, 0);
-
-      const endDate = new Date(resultDate.getTime() + 60 * 60 * 1000);
+      // Zoek alleen onderwerp
+      const title = text.split(/\b(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag|\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?)\b/)[0].trim();
 
       return {
-        summary: text,
+        summary: title,
         start: {
-          dateTime: resultDate.toISOString(),
+          dateTime: startDate.toISOString(),
           timeZone: 'Europe/Amsterdam',
         },
         end: {
@@ -113,14 +125,13 @@
     }
   </script>
 </head>
-<body>
-  <h1>Agenda Tool (met Parser1)</h1>
+<body onload="gapiLoaded();">
+  <h1>Agenda Tool</h1>
   <button onclick="handleAuthClick()">Log in met Google</button>
   <p id="status">Niet ingelogd</p>
-  <textarea id="inputText" rows="4" cols="50" placeholder="Bijv: kapper maandag 14:00"></textarea><br>
+  <textarea id="inputText" rows="4" cols="50" placeholder="Bijv: kapper maandag 14:00 of vergadering 5/7 15:00 tot 16:30"></textarea><br>
   <button onclick="addEvent()">Voeg toe aan agenda</button>
 
   <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
-  <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
 </body>
 </html>
