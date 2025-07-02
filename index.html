@@ -85,13 +85,14 @@ window.onload = () => {
     });
   }
 };
-function handleAuthClick() {
+window.handleAuthClick = function() {
   if (tokenClient) {
     tokenClient.requestAccessToken();
   } else {
     alert("Google auth is nog niet geladen.");
   }
 }
+
 
 // datum helpers
 const days = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
