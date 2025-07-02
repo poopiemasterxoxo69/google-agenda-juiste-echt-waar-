@@ -1,6 +1,7 @@
+<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Agenda Tool</title>
   <style>
     body {
@@ -17,7 +18,7 @@
       font-size: 16px;
       padding: 10px;
     }
-    #kleur, #heleDagContainer {
+    #kleur, #duurContainer, #heleDagContainer {
       margin-bottom: 20px;
     }
   </style>
@@ -26,7 +27,8 @@
 <h1>Agenda Tool</h1>
 <button onclick="handleAuthClick()">Log in met Google</button>
 <p id="status">Niet ingelogd</p>
-<textarea id="inputText" rows="10" placeholder="Bijv: rijles&#10;maandag 14:00&#10;woensdag 15:00"></textarea>
+
+<textarea id="inputText" rows="8" placeholder="Bijv: kapper donderdag 15:00&#10;of: rijles&#10;maandag 14:00&#10;woensdag 15:00"></textarea>
 
 <label for="kleur">Kies kleur:</label>
 <select id="kleur">
@@ -38,6 +40,17 @@
   <option value="4">🍇 Paars</option><option value="1">💗 Roze</option>
   <option value="8">⚫ Grijs</option>
 </select>
+
+<div id="duurContainer">
+  <label for="duur">Duur:</label>
+  <select id="duur">
+    <option value="30">30 minuten</option>
+    <option value="45">45 minuten</option>
+    <option value="60">60 minuten</option>
+    <option value="90">1,5 uur</option>
+    <option value="120">2 uur</option>
+  </select>
+</div>
 
 <div id="heleDagContainer">
   <label><input type="checkbox" id="heleDag"> Hele dag</label>
@@ -80,141 +93,118 @@ function handleAuthClick() {
   }
 }
 
-function parseDateTimeFromText(text) {
-  const dagen = {
-    maandag:1, dinsdag:2, woensdag:3, donderdag:4, vrijdag:5, zaterdag:6, zondag:0
-  };
-  const vandaag = new Date();
+// datum helpers
+const days = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
+function nextDateForDay(dayName) {
+  const today = new Date();
+  const dayIndex = days.indexOf(dayName.toLowerCase());
+  if (dayIndex === -1) return null;
+  const result = new Date();
+  result.setDate(today.getDate() + ((7 + dayIndex - today.getDay()) % 7));
+  return result;
+}
 
-  let datum = new Date();
-  const dateMatch = text.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
-  const maandMatch = text.match(/(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)/i);
-  const weekdagMatch = text.match(/(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag)/i);
-  const tijd = text.match(/(\d{1,2}):(\d{2})/);
+function parseTextToEvents(inputText, heleDag, duurMinuten) {
+  const lines = inputText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const events = [];
+  let currentTitle = null;
 
-  if (!tijd) return null;
+  for (const line of lines) {
+    const tijd = line.match(/(\d{1,2}):(\d{2})/);
+    const dag = days.find(d => line.toLowerCase().includes(d));
+    const datumMatch = line.match(/(\d{1,2})[\/-](\d{1,2})/);
 
-  if (dateMatch) {
-    const day = parseInt(dateMatch[1]), month = parseInt(dateMatch[2]) - 1;
-    const year = dateMatch[3] ? parseInt(dateMatch[3]) : vandaag.getFullYear();
-    datum = new Date(year, month, day);
-  } else if (maandMatch) {
-    const months = {
-      januari:0,februari:1,maart:2,april:3,mei:4,juni:5,juli:6,
-      augustus:7,september:8,oktober:9,november:10,december:11
-    };
-    const day = parseInt(maandMatch[1]);
-    const month = months[maandMatch[2].toLowerCase()];
-    datum = new Date(vandaag.getFullYear(), month, day);
-  } else if (weekdagMatch) {
-    const targetDay = dagen[weekdagMatch[1].toLowerCase()];
-    const vandaagDag = vandaag.getDay();
-    const verschil = (targetDay - vandaagDag + 7) % 7;
-    datum = new Date();
-    datum.setDate(vandaag.getDate() + verschil);
-  } else {
-    return null;
+    if (tijd && (dag || datumMatch)) {
+      let date = new Date();
+      if (dag) date = nextDateForDay(dag);
+      else if (datumMatch) {
+        const [_, d, m] = datumMatch;
+        date = new Date(new Date().getFullYear(), parseInt(m)-1, parseInt(d));
+      }
+
+      const [_, h, m] = tijd;
+      date.setHours(parseInt(h), parseInt(m), 0, 0);
+      const start = new Date(date);
+      const end = new Date(start.getTime() + duurMinuten * 60 * 1000);
+
+      events.push({
+        summary: currentTitle || dag || "Gebeurtenis",
+        start: { dateTime: start.toISOString(), timeZone: 'Europe/Amsterdam' },
+        end: { dateTime: end.toISOString(), timeZone: 'Europe/Amsterdam' }
+      });
+
+    } else if (tijd && !dag && !datumMatch && currentTitle) {
+      // tijd zonder datum -> vandaag?
+      const today = new Date();
+      const [_, h, m] = tijd;
+      today.setHours(parseInt(h), parseInt(m), 0, 0);
+      const start = new Date(today);
+      const end = new Date(start.getTime() + duurMinuten * 60 * 1000);
+      events.push({
+        summary: currentTitle,
+        start: { dateTime: start.toISOString(), timeZone: 'Europe/Amsterdam' },
+        end: { dateTime: end.toISOString(), timeZone: 'Europe/Amsterdam' }
+      });
+    } else {
+      // regel is waarschijnlijk een titel
+      currentTitle = line;
+    }
   }
 
-  datum.setHours(parseInt(tijd[1]), parseInt(tijd[2]), 0, 0);
-  return datum;
+  return events;
 }
 
 async function checkConflict(event) {
   const params = {
     calendarId: 'primary',
-    timeMin: event.start.dateTime || (event.start.date + 'T00:00:00Z'),
-    timeMax: event.end.dateTime || (event.end.date + 'T23:59:59Z'),
+    timeMin: event.start.dateTime,
+    timeMax: event.end.dateTime,
     singleEvents: true
   };
   const response = await gapi.client.calendar.events.list(params);
-  const conflicts = response.result.items.filter(item => {
-    const startA = new Date(event.start.dateTime);
-    const endA = new Date(event.end.dateTime);
-    const startB = new Date(item.start.dateTime);
-    const endB = new Date(item.end.dateTime);
-    return (startA < endB) && (endA > startB);
-  });
-  return conflicts;
+  return response.result.items.length > 0 ? response.result.items[0] : null;
 }
 
 async function addEvent(event, kleurId) {
   event.colorId = kleurId;
   try {
-    const conflicts = await checkConflict(event);
-    if (conflicts.length > 0) {
-      const conflictNames = conflicts.map(e => e.summary).join(", ");
-      const tijd = new Date(event.start.dateTime).toLocaleString("nl-NL");
-      if (!confirm(Er bestaat al een event op ${tijd} (${conflictNames}). Toch toevoegen?)) return;
+    const conflict = await checkConflict(event);
+    if (conflict) {
+      if (!confirm(`Er bestaat al een afspraak (${conflict.summary}) rond ${new Date(event.start.dateTime).toLocaleString()}. Toch toevoegen?`)) {
+        return;
+      }
     }
-    await gapi.client.calendar.events.insert({
+    const request = gapi.client.calendar.events.insert({
       calendarId: 'primary',
       resource: event,
-    }).execute();
-  } catch (e) {
-    console.error(e);
-    alert("Fout bij toevoegen.");
+    });
+    await request.execute();
+  } catch (error) {
+    console.error(error);
+    alert("Fout bij toevoegen van event.");
   }
 }
 
 async function addMultipleEvents() {
   if (!accessToken) {
-    alert("Log eerst in.");
+    alert("Log eerst in met Google.");
     return;
   }
 
-  const lijnen = document.getElementById("inputText").value
-    .split("\n")
-    .map(l => l.trim())
-    .filter(l => l);
+  const kleuren = ["1","2","3","4","5","6","7","8","9","10","11"];
+  const kleurSelect = document.getElementById("kleur");
+  const gekozen = kleurSelect.value === "random" ? kleuren[Math.floor(Math.random() * kleuren.length)] : kleurSelect.value;
   const heleDag = document.getElementById("heleDag").checked;
-  const kleuren = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"];
-  const gekozenKleur =
-    document.getElementById("kleur").value === "random"
-      ? kleuren[Math.floor(Math.random() * kleuren.length)]
-      : document.getElementById("kleur").value;
+  const duurMin = parseInt(document.getElementById("duur").value);
 
-  let huidigeTitel = "";
-  for (const regel of lijnen) {
-    const datum = parseDateTimeFromText(regel);
+  const input = document.getElementById("inputText").value;
+  const events = parseTextToEvents(input, heleDag, duurMin);
 
-    if (datum) {
-      // Als regel een datum bevat, koppel aan huidige titel
-      const start = new Date(datum);
-      const end = new Date(start.getTime() + 30 * 60 * 1000);
-
-      const event = heleDag
-        ? {
-            summary: huidigeTitel || "Ongetitelde gebeurtenis",
-            start: { date: start.toISOString().split("T")[0] },
-            end: {
-              date: new Date(start.getTime() + 86400000)
-                .toISOString()
-                .split("T")[0],
-            },
-          }
-        : {
-            summary: huidigeTitel || "Ongetitelde gebeurtenis",
-            start: {
-              dateTime: start.toISOString(),
-              timeZone: "Europe/Amsterdam",
-            },
-            end: {
-              dateTime: end.toISOString(),
-              timeZone: "Europe/Amsterdam",
-            },
-          };
-
-      await addEvent(event, gekozenKleur);
-    } else {
-      // Als regel geen datum bevat, dan is het de nieuwe titel
-      huidigeTitel = regel;
-    }
+  for (const event of events) {
+    await addEvent(event, gekozen);
   }
-
-  alert("Alle events verwerkt.");
+  alert("Klaar! Alle events verwerkt.");
 }
-
 </script>
 </body>
 </html>
