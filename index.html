@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Agenda Tool</title>
+  <link rel="icon" href="data:,">
   <style>
     body {
       font-family: sans-serif;
@@ -67,40 +68,32 @@ let accessToken = null;
 function gapiLoaded() {
   gapi.load('client', initializeGapiClient);
 }
-
 async function initializeGapiClient() {
   await gapi.client.init({
-    apiKey: '', // ← vul in indien nodig
+    apiKey: '',
     discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
   });
 }
-
 window.onload = () => {
-  const initAuth = () => {
-    if (typeof google !== "undefined") {
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
-        scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events',
-        callback: (tokenResponse) => {
-          accessToken = tokenResponse.access_token;
-          document.getElementById("status").innerText = "Ingelogd ✔";
-        },
-      });
-    }
-  };
-  // Vertraging nodig soms bij trage netwerken
-  setTimeout(initAuth, 500);
+  if (typeof google !== "undefined") {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
+      scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events',
+      callback: (tokenResponse) => {
+        accessToken = tokenResponse.access_token;
+        document.getElementById("status").innerText = "Ingelogd ✔";
+      },
+    });
+  }
 };
-
 window.handleAuthClick = function() {
   if (tokenClient) {
-    tokenClient.requestAccessToken({ prompt: '' }); // popup dwingen
+    tokenClient.requestAccessToken({ prompt: '' });
   } else {
     alert("Google auth is nog niet geladen.");
   }
 }
 
-// datum helpers
 const days = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
 function nextDateForDay(dayName) {
   const today = new Date();
@@ -201,6 +194,7 @@ async function addMultipleEvents() {
   const gekozen = kleurSelect.value === "random" ? kleuren[Math.floor(Math.random() * kleuren.length)] : kleurSelect.value;
   const heleDag = document.getElementById("heleDag").checked;
   const duurMin = parseInt(document.getElementById("duur").value);
+
   const input = document.getElementById("inputText").value;
   const events = parseTextToEvents(input, heleDag, duurMin);
 
