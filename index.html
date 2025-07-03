@@ -153,13 +153,13 @@ function parseTextToEvent(text) {
     return {h, m};
   }
 
-  const tekstTijd = text.match(/\b(half|kwart over|kwart voor)?\s*(\d{1,2})\b/);
+  const tekstTijd = text.match(/(?:om\s*)?(half|kwart over|kwart voor)?\s*(\d{1,2})/);
   if (tekstTijd) {
     const mod = tekstTijd[1] ? tekstTijd[1].toLowerCase() : '';
     let uur = parseInt(tekstTijd[2]);
     let min = 0;
 
-    console.log(`tekst patroon gevonden: modifier=${mod}, uur=${uur}`);
+    console.log(`tekst patroon gevonden: modifier=${mod || '(geen)'}, uur=${uur}`);
 
     // bepaal minuten en corrigeer uur voor half/kwart
     if (mod === 'half') {
@@ -197,6 +197,7 @@ function parseTextToEvent(text) {
   console.log(`geen tijdspatroon gevonden`);
   return null;
 })();
+
 
 
 
