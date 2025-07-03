@@ -111,7 +111,11 @@ function parseTextToEvent(text) {
 
   const tijd = (() => {
     const hhmm = text.match(/(\d{1,2})[:;](\d{2})/);
-    if (hhmm) return {h: parseInt(hhmm[1]), m: parseInt(hhmm[2])};
+    if (hhmm) {
+      let h = parseInt(hhmm[1]), m = parseInt(hhmm[2]);
+      if (h < 8) h += 12; // neem middag/avond aan
+      return {h, m};
+    }
 
     const tekstTijd = text.match(/\b(half|kwart over|kwart voor)?\s*(\d{1,2})\b/i);
     if (tekstTijd) {
@@ -127,6 +131,7 @@ function parseTextToEvent(text) {
         uur = (uur - 1 + 24) % 24;
         min = 45;
       }
+      if (uur < 8) uur += 12; // neem middag/avond aan
       return {h: uur, m: min};
     }
 
