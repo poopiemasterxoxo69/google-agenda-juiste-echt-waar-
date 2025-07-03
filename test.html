@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <title>Tijd Extractor</title>
 <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
@@ -29,8 +29,11 @@ function extractTijden() {
 
     const tijden = [];
 
-    // Alleen tijden herkennen, geen datums
-    const tijdRegex = /\b(half\s\d{1,2}|kwart\s(over|voor)\s\d{1,2}|\d{1,2}(?::\d{2})?\s?uur|\d{1,2}:\d{2})\b/g;
+    // Verbeterde regex met toleranties voor kleine typfouten
+    const tijdRegex = /(\b(?:hal\s*|half|h)ocker\s*|kwart\s*(?:over|voor|voor|voor|vvoor|vooor)|\d{1,2}:\d{2}|\d{1,2}\s*uur)/gi;
+    
+    // Iets uitgebreidere regex voor hulp bij foute spelling
+    // Het detecteert hoofdmatige fouten, maar voor volledige fouttolerantie is complex
     const matches = text.match(tijdRegex);
 
     if (matches) {
@@ -58,35 +61,49 @@ function extractTijden() {
 function normalizeTijd(tijdStr) {
     let uur = 0, min = 0;
 
-    const halfMatch = tijdStr.match(/half\s(\d{1,2})/);
-    const kwartOverMatch = tijdStr.match(/kwart\s(over)\s(\d{1,2})/);
-    const kwartVoorMatch = tijdStr.match(/kwart\s(voor)\s(\d{1,2})/);
-    const hhmmMatch = tijdStr.match(/(\d{1,2}):(\d{2})/);
-    const uurMatch = tijdStr.match(/^(\d{1,2})\s?uur$/);
+    // Leer de baseline regex voor tijdsherkenning
+    const halfRegex = /(?:hal\s*|half|h)(?:\s*ocker)?/i; // bv 'half', 'hal', 'h' en varianten
+    const kwartOverRegex = /kwart\s*(?:over|vvoor|vooor|voor)?\s*(\d{1,2})/i; // 'kwart over 5', 'kwart vvoor 5'
+    const kwartVoorRegex = /kwart\s*voor\s*(\d{1,2})/i;
+    const hhmmRegex = /(\d{1,2})\s*:\s*(\d{2})/;
+    const uurRegex = /^(\d{1,2})\s*uur$/;
 
-    if (halfMatch) {
-        uur = parseInt(halfMatch[1]) - 1;
+    // Detectie van verschillende tijdsformaten
+    if (halfRegex.test(tijdStr)) {
+        const match = tijdStr.match(/(\d{1,2})/);
+        let h = match ? parseInt(match[1]) : 0;
+        uur = h - 1;
         min = 30;
-    } else if (kwartOverMatch) {
-        uur = parseInt(kwartOverMatch[2]);
+    } else if (kwartOverRegex.test(tijdStr)) {
+        const match = tijdStr.match(/\d{1,2}/);
+        let h = match ? parseInt(match[0]) : 0;
+        uur = h;
         min = 15;
-    } else if (kwartVoorMatch) {
-        uur = parseInt(kwartVoorMatch[2]) - 1;
+    } else if (kwartVoorRegex.test(tijdStr)) {
+        const match = tijdStr.match(/\d{1,2}/);
+        let h = match ? parseInt(match[0]) : 0;
+        uur = h - 1;
         min = 45;
-    } else if (hhmmMatch) {
-        uur = parseInt(hhmmMatch[1]);
-        min = parseInt(hhmmMatch[2]);
-    } else if (uurMatch) {
-        uur = parseInt(uurMatch[1]);
+    } else if (hhmmRegex.test(tijdStr)) {
+        const match = tijdStr.match(hhmmRegex);
+        uur = parseInt(match[1]);
+        min = parseInt(match[2]);
+    } else if (uurRegex.test(tijdStr)) {
+        const match = tijdStr.match(uurRegex);
+        uur = parseInt(match[1]);
         min = 0;
     } else {
-        return null;
+        return null; // geen herkenning
     }
 
-    // Als het een tijd is kleiner dan 8 en groter dan 0, beschouw het als middag/avond
+    // Schooltijd of avondtijd correct interpreteren
     if (uur >= 1 && uur < 8) {
-        uur += 12;
+        uur += 12; // van 1-7 uur naar 13-19
     }
+
+    // Corrigeer uren die kleiner zijn dan 0 of >=24
+    if (uur < 0) uur += 24;
+    if (uur >= 24) uur -= 24;
 
     return `${uur.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
 }
