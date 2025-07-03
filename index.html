@@ -159,7 +159,19 @@
         singleEvents: true,
         orderBy: 'startTime'
       });
-      return res.result.items.length > 0;
+
+      const newStart = new Date(event.start.dateTime || event.start.date + "T00:00:00Z").getTime();
+      const newEnd = new Date(event.end.dateTime || event.end.date + "T23:59:59Z").getTime();
+
+      for (const item of res.result.items) {
+        const itemStart = new Date(item.start.dateTime || item.start.date + "T00:00:00Z").getTime();
+        const itemEnd = new Date(item.end.dateTime || item.end.date + "T23:59:59Z").getTime();
+
+        if (Math.abs(newStart - itemEnd) < 30 * 60 * 1000 || Math.abs(itemStart - newEnd) < 30 * 60 * 1000) {
+          return true;
+        }
+      }
+      return false;
     }
 
     async function addEvent() {
@@ -186,7 +198,7 @@
       event.colorId = gekozen;
 
       const conflict = await checkConflict(event);
-      if (conflict && !confirm("Er is al iets gepland op deze dag. Toch toevoegen?")) return;
+      if (conflict && !confirm("Er is al iets gepland dat binnen 30 minuten overlapt. Toch toevoegen?")) return;
 
       try {
         const request = gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
