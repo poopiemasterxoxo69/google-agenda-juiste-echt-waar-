@@ -103,9 +103,24 @@ function parseTextToEvent(text) {
     const dateMatch = text.match(/(\d{1,2})\s*(j[a-z]+)/i);
     if (dateMatch) {
       const day = parseInt(dateMatch[1]);
-      const monthName = Object.keys(monthMap).find(m => levenshtein(m, dateMatch[2]) <= 2);
-      if (monthName) {
-        return new Date(today.getFullYear(), monthMap[monthName], day);
+      const maandTekst = dateMatch[2].toLowerCase();
+
+      // Eerst exact match
+      if (monthMap.hasOwnProperty(maandTekst)) {
+        return new Date(today.getFullYear(), monthMap[maandTekst], day);
+      }
+
+      // Anders: beste fuzzy match
+      let beste = null, besteAfstand = Infinity;
+      for (const m of Object.keys(monthMap)) {
+        const afstand = levenshtein(m, maandTekst);
+        if (afstand < besteAfstand) {
+          besteAfstand = afstand;
+          beste = m;
+        }
+      }
+      if (beste && besteAfstand <= 2) {
+        return new Date(today.getFullYear(), monthMap[beste], day);
       }
     }
     return new Date();
