@@ -138,13 +138,13 @@ function parseTextToEvent(text) {
 })();
 
   const tijd = (() => {
-  const hhmm = text.match(/(\d{1,2})[:;\s](\d{2})/);
   let hint = '';
   if (text.includes("ochtend")) hint = "ochtend";
   if (text.includes("middag")) hint = "middag";
   if (text.includes("avond")) hint = "avond";
   if (text.includes("nacht")) hint = "nacht";
 
+  const hhmm = text.match(/(\d{1,2})[:;\s](\d{2})/);
   if (hhmm) {
     let h = parseInt(hhmm[1]), m = parseInt(hhmm[2]);
     return {h, m};
@@ -157,21 +157,22 @@ function parseTextToEvent(text) {
     const mod = tekstTijd[1] ? tekstTijd[1].toLowerCase() : '';
 
     if (mod === 'half') {
-      uur = (uur - 1 + 24) % 24;
+      uur = uur - 1;
       min = 30;
     } else if (mod === 'kwart over') {
       min = 15;
     } else if (mod === 'kwart voor') {
-      uur = (uur - 1 + 24) % 24;
+      uur = uur - 1;
       min = 45;
     }
+
+    if (uur <= 0) uur += 12; // fallback voor 'half 1'
 
     // Dagdeel hints toepassen
     if (hint === "ochtend" && uur >= 12) uur -= 12;
     else if (hint === "middag" && uur < 12) uur += 12;
     else if (hint === "avond" && uur < 12) uur += 12;
-    else if (hint === "nacht") uur = (uur + 24) % 24;
-    else if (!hint && uur < 8) uur += 12; // <-- nieuwe regel: standaard middag
+    else if (!hint && uur < 8) uur += 12; // standaard middag als geen hint
 
     return {h: uur, m: min};
   }
