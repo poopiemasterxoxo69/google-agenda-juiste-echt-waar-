@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>Tijd Extractor</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    textarea { width: 100%; height: 100px; }
+    button { padding: 10px 20px; margin-top: 10px; }
+    .result { margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<h1>Tijd Extractor</h1>
+<p>Voer hier je verhaaltje in. Voorbeeld: <em>ik bleef van 5 april tot 8 juni, en om half 5 ging het regenen</em></p>
+
+<textarea id="inputText"></textarea>
+<br>
+<button onclick="extractTijden()">Extract Tijden</button>
+
+<div class="result" id="result"></div>
+
+<script>
+function extractTijden() {
+    const text = document.getElementById('inputText').value.toLowerCase();
+    const resultDiv = document.getElementById('result');
+    let output = "<h3>Gevonden tijden:</h3>";
+
+    const tijden = [];
+
+    // Alleen tijden herkennen, geen datums
+    const tijdRegex = /\b(half\s\d{1,2}|kwart\s(over|voor)\s\d{1,2}|\d{1,2}(?::\d{2})?\s?uur|\d{1,2}:\d{2})\b/g;
+    const matches = text.match(tijdRegex);
+
+    if (matches) {
+        matches.forEach(t => {
+            const norm = normalizeTijd(t.trim());
+            if (norm) {
+                tijden.push(`${t.trim()} → ${norm}`);
+            }
+        });
+    }
+
+    if (tijden.length > 0) {
+        output += "<ul>";
+        tijden.forEach(t => {
+            output += `<li>${t}</li>`;
+        });
+        output += "</ul>";
+    } else {
+        output += "<p>Geen tijden gevonden.</p>";
+    }
+
+    resultDiv.innerHTML = output;
+}
+
+function normalizeTijd(tijdStr) {
+    let uur = 0, min = 0;
+
+    const halfMatch = tijdStr.match(/half\s(\d{1,2})/);
+    const kwartOverMatch = tijdStr.match(/kwart\s(over)\s(\d{1,2})/);
+    const kwartVoorMatch = tijdStr.match(/kwart\s(voor)\s(\d{1,2})/);
+    const hhmmMatch = tijdStr.match(/(\d{1,2}):(\d{2})/);
+    const uurMatch = tijdStr.match(/^(\d{1,2})\s?uur$/);
+
+    if (halfMatch) {
+        uur = parseInt(halfMatch[1]) - 1;
+        min = 30;
+    } else if (kwartOverMatch) {
+        uur = parseInt(kwartOverMatch[2]);
+        min = 15;
+    } else if (kwartVoorMatch) {
+        uur = parseInt(kwartVoorMatch[2]) - 1;
+        min = 45;
+    } else if (hhmmMatch) {
+        uur = parseInt(hhmmMatch[1]);
+        min = parseInt(hhmmMatch[2]);
+    } else if (uurMatch) {
+        uur = parseInt(uurMatch[1]);
+        min = 0;
+    } else {
+        return null;
+    }
+
+    // Als het een tijd is kleiner dan 8 en groter dan 0, beschouw het als middag/avond
+    if (uur >= 1 && uur < 8) {
+        uur += 12;
+    }
+
+    return `${uur.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
+}
+</script>
+
+</body>
+</html>
