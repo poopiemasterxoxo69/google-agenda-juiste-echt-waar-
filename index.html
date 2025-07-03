@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="nl">
 <head>
 <meta charset="UTF-8">
 <title>Agenda Tool met Kleuren</title>
@@ -26,7 +26,7 @@ label { font-weight: bold; }
 <h1>Agenda Tool</h1>
 <button onclick="handleAuthClick()">Log in met Google</button>
 <p id="status">Niet ingelogd</p>
-<textarea id="inputText" rows="4" placeholder="Bijv: kapper 5 juli 14:00 of vergadering 14:00 op 5/7"></textarea>
+<textarea id="inputText" rows="4" placeholder="Bijv: kapper 5 juli 14:00 of vergadering om half 4"></textarea>
 
 <label for="kleur">Kies kleur:</label>
 <select id="kleur">
@@ -87,40 +87,55 @@ function handleAuthClick() {
 }
 
 function parseTextToEvent(text) {
-  const tijd = text.match(/(\d{1,2}):(\d{2})(?:\s*(?:tot|\-|–)\s*(\d{1,2}):(\d{2}))?/);
-  let startH = 0, startM = 0, endH = null, endM = null;
-  if (tijd) {
-    startH = parseInt(tijd[1]);
-    startM = parseInt(tijd[2]);
-    if (tijd[3]) endH = parseInt(tijd[3]);
-    if (tijd[4]) endM = parseInt(tijd[4]);
-  }
-
-  let datum = null;
-  const dateMatch = text.match(/(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?|\b(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\b/i);
-  if (dateMatch) {
-    datum = new Date();
-    if (dateMatch[1] && dateMatch[2]) {
-      const day = parseInt(dateMatch[1]);
-      const month = parseInt(dateMatch[2]) - 1;
-      const year = dateMatch[3] ? parseInt(dateMatch[3]) : new Date().getFullYear();
-      datum = new Date(year, month, day);
-    } else if (dateMatch[4] && dateMatch[5]) {
-      const months = {januari:0,februari:1,maart:2,april:3,mei:4,juni:5,juli:6,augustus:7,september:8,oktober:9,november:10,december:11};
-      const day = parseInt(dateMatch[4]);
-      const month = months[dateMatch[5].toLowerCase()];
-      datum = new Date(new Date().getFullYear(), month, day);
-    }
-  }
-
-  const title = text.split(/\d{1,2}[:\/]/)[0].trim() || "Gebeurtenis";
   const heleDag = document.getElementById("heleDag").checked;
+  const title = text.split(/\d{1,2}[:;]/)[0].split("om")[0].trim() || "Gebeurtenis";
 
-  if (!datum && !tijd) {
+  const datum = (() => {
+    const dateMatch = text.match(/(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?|\b(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\b/i);
+    if (dateMatch) {
+      const today = new Date();
+      if (dateMatch[1] && dateMatch[2]) {
+        const day = parseInt(dateMatch[1]);
+        const month = parseInt(dateMatch[2]) - 1;
+        const year = dateMatch[3] ? parseInt(dateMatch[3]) : today.getFullYear();
+        return new Date(year, month, day);
+      } else if (dateMatch[4] && dateMatch[5]) {
+        const months = {januari:0,februari:1,maart:2,april:3,mei:4,juni:5,juli:6,augustus:7,september:8,oktober:9,november:10,december:11};
+        const day = parseInt(dateMatch[4]);
+        const month = months[dateMatch[5].toLowerCase()];
+        return new Date(today.getFullYear(), month, day);
+      }
+    }
+    return new Date(); // vandaag
+  })();
+
+  const tijd = (() => {
+    const hhmm = text.match(/(\d{1,2})[:;](\d{2})/);
+    if (hhmm) return {h: parseInt(hhmm[1]), m: parseInt(hhmm[2])};
+
+    const tekstTijd = text.match(/\b(half|kwart over|kwart voor)?\s*(\d{1,2})\b/i);
+    if (tekstTijd) {
+      let uur = parseInt(tekstTijd[2]);
+      let min = 0;
+      const mod = tekstTijd[1] ? tekstTijd[1].toLowerCase() : '';
+      if (mod === 'half') {
+        uur = (uur - 1 + 24) % 24;
+        min = 30;
+      } else if (mod === 'kwart over') {
+        min = 15;
+      } else if (mod === 'kwart voor') {
+        uur = (uur - 1 + 24) % 24;
+        min = 45;
+      }
+      return {h: uur, m: min};
+    }
+
     return null;
-  }
-  if (!datum) {
-    datum = new Date();
+  })();
+
+  if (!heleDag && !tijd) {
+    alert("Kon geen geldige tijd vinden in de tekst. Gebruik hh:mm of tekst als 'half 4'");
+    return null;
   }
 
   if (heleDag) {
@@ -132,9 +147,9 @@ function parseTextToEvent(text) {
       end: { date: endDate }
     };
   } else {
-    datum.setHours(startH, startM, 0, 0);
+    datum.setHours(tijd.h, tijd.m, 0, 0);
     const startDate = new Date(datum);
-    const endDate = endH !== null ? new Date(datum.getFullYear(), datum.getMonth(), datum.getDate(), endH, endM || 0) : new Date(startDate.getTime() + 30 * 60 * 1000);
+    const endDate = new Date(startDate.getTime() + 30 * 60 * 1000);
     return {
       summary: title,
       start: { dateTime: startDate.toISOString(), timeZone: 'Europe/Amsterdam' },
@@ -199,10 +214,7 @@ async function addEvent() {
   }
 
   const event = parseTextToEvent(text);
-  if (!event) {
-    alert("Kon geen datum of tijd vinden in de tekst.");
-    return;
-  }
+  if (!event) return;
 
   event.colorId = gekozen;
 
@@ -219,8 +231,7 @@ async function addEvent() {
   }
 
   try {
-    const request = gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
-    await request.execute();
+    await gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
     alert("Event toegevoegd!");
   } catch (error) {
     console.error(error);
