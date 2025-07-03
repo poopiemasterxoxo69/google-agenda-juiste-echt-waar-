@@ -103,27 +103,34 @@ function levenshtein(a,b){
 }
 
 function detecteerTijdModifier(tekst) {
+  tekst = tekst.toLowerCase();
   const opties = ['half', 'kwart over', 'kwart voor'];
-  let beste = null, besteAfstand = Infinity;
 
+  // Eerst exacte match
   for (const optie of opties) {
-    const afstand = levenshtein(tekst, optie);
-    if (afstand < besteAfstand && afstand <= 2) {
-      besteAfstand = afstand;
-      beste = optie;
+    if (tekst.includes(optie)) {
+      console.log(`exact gevonden modifier: ${optie}`);
+      return optie;
+    }
+  }
+
+  // Anders fuzzy per woord
+  let beste = null, besteAfstand = Infinity;
+  const woorden = tekst.split(/\s+/);
+
+  for (const woord of woorden) {
+    for (const optie of opties) {
+      const afstand = levenshtein(woord, optie);
+      if (afstand < besteAfstand && afstand <= 2) {
+        besteAfstand = afstand;
+        beste = optie;
+      }
     }
   }
 
   if (beste) {
     console.log(`fuzzy gevonden modifier: ${beste}`);
     return beste;
-  }
-
-  for (const optie of opties) {
-    if (tekst.includes(optie)) {
-      console.log(`exact gevonden modifier: ${optie}`);
-      return optie;
-    }
   }
 
   return null;
