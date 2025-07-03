@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>Agenda Tool met Kleuren</title>
+<title>Agenda Tool met Kleuren & Duur</title>
 <style>
 body {
   font-family: sans-serif;
@@ -18,7 +18,7 @@ textarea, select, button {
   font-size: 16px;
   padding: 10px;
 }
-#kleur { margin-bottom: 20px; }
+#kleur, #duur { margin-bottom: 20px; }
 label { font-weight: bold; }
 </style>
 </head>
@@ -26,7 +26,7 @@ label { font-weight: bold; }
 <h1>Agenda Tool</h1>
 <button onclick="handleAuthClick()">Log in met Google</button>
 <p id="status">Niet ingelogd</p>
-<textarea id="inputText" rows="4" placeholder="Bijv: kapper 5 juli 14:00 of vergadering om half 4"></textarea>
+<textarea id="inputText" rows="4" placeholder="Bijv: kapper 5 juli om half 4 of vergadering 6 juli 14:00"></textarea>
 
 <label for="kleur">Kies kleur:</label>
 <select id="kleur">
@@ -42,6 +42,14 @@ label { font-weight: bold; }
 <option value="4">🍇 Paars</option>
 <option value="1">💗 Roze</option>
 <option value="8">⚫ Grijs</option>
+</select>
+
+<label for="duur">Kies duur:</label>
+<select id="duur">
+<option value="15">15 minuten</option>
+<option value="30">30 minuten</option>
+<option value="60" selected>1 uur</option>
+<option value="120">2 uur</option>
 </select>
 
 <label><input type="checkbox" id="heleDag"> Hele dag</label>
@@ -78,46 +86,48 @@ window.onload = () => {
   }
 };
 
-function handleAuthClick() {
-  if (tokenClient) {
-    tokenClient.requestAccessToken();
-  } else {
-    alert("Google auth is nog niet geladen.");
-  }
-}
-
-function parseTextToEvent(text) {
+function parseTextToEvent(text, duurMinuten) {
   const heleDag = document.getElementById("heleDag").checked;
+  text = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
   const title = text.split(/\d{1,2}[:;]/)[0].split("om")[0].trim() || "Gebeurtenis";
 
+  const monthMap = {
+    januari:0, februari:1, maart:2, april:3, mei:4, juni:5, juli:6,
+    augustus:7, september:8, oktober:10, november:10, december:11
+  };
+
   const datum = (() => {
-    const dateMatch = text.match(/(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?|\b(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\b/i);
+    const today = new Date();
+
+    const dateMatch = text.match(/(\d{1,2})\s*(j[a-z]+)/i);
     if (dateMatch) {
-      const today = new Date();
-      if (dateMatch[1] && dateMatch[2]) {
-        const day = parseInt(dateMatch[1]);
-        const month = parseInt(dateMatch[2]) - 1;
-        const year = dateMatch[3] ? parseInt(dateMatch[3]) : today.getFullYear();
-        return new Date(year, month, day);
-      } else if (dateMatch[4] && dateMatch[5]) {
-        const months = {januari:0,februari:1,maart:2,april:3,mei:4,juni:5,juli:6,augustus:7,september:8,oktober:9,november:10,december:11};
-        const day = parseInt(dateMatch[4]);
-        const month = months[dateMatch[5].toLowerCase()];
-        return new Date(today.getFullYear(), month, day);
+      const day = parseInt(dateMatch[1]);
+      const monthName = Object.keys(monthMap).find(m => levenshtein(m, dateMatch[2]) <= 2);
+      if (monthName) {
+        return new Date(today.getFullYear(), monthMap[monthName], day);
       }
     }
-    return new Date(); // vandaag
+    return new Date();
   })();
 
   const tijd = (() => {
-    const hhmm = text.match(/(\d{1,2})[:;](\d{2})/);
+    const hhmm = text.match(/(\d{1,2})[:;\s](\d{2})/);
+    let hint = '';
+    if (text.includes("ochtend")) hint = "ochtend";
+    if (text.includes("middag")) hint = "middag";
+    if (text.includes("avond")) hint = "avond";
+    if (text.includes("nacht")) hint = "nacht";
+
     if (hhmm) {
       let h = parseInt(hhmm[1]), m = parseInt(hhmm[2]);
-      if (h < 8) h += 12; // neem middag/avond aan
+      if (!hint && h < 8) h += 12;
+      if (hint === "ochtend" && h >= 12) h -= 12;
+      if (hint === "avond" && h < 12) h += 12;
       return {h, m};
     }
 
-    const tekstTijd = text.match(/\b(half|kwart over|kwart voor)?\s*(\d{1,2})\b/i);
+    const tekstTijd = text.match(/\b(half|kwart over|kwart voor)?\s*(\d{1,2})\b/);
     if (tekstTijd) {
       let uur = parseInt(tekstTijd[2]);
       let min = 0;
@@ -131,7 +141,10 @@ function parseTextToEvent(text) {
         uur = (uur - 1 + 24) % 24;
         min = 45;
       }
-      if (uur < 8) uur += 12; // neem middag/avond aan
+
+      if (!hint && uur < 8) uur += 12;
+      if (hint === "ochtend" && uur >= 12) uur -= 12;
+      if (hint === "avond" && uur < 12) uur += 12;
       return {h: uur, m: min};
     }
 
@@ -139,7 +152,7 @@ function parseTextToEvent(text) {
   })();
 
   if (!heleDag && !tijd) {
-    alert("Kon geen geldige tijd vinden in de tekst. Gebruik hh:mm of tekst als 'half 4'");
+    alert("Kon geen geldige tijd vinden. Gebruik hh:mm of tekst als 'half 4' of 'half 4 ochtend'");
     return null;
   }
 
@@ -154,7 +167,7 @@ function parseTextToEvent(text) {
   } else {
     datum.setHours(tijd.h, tijd.m, 0, 0);
     const startDate = new Date(datum);
-    const endDate = new Date(startDate.getTime() + 30 * 60 * 1000);
+    const endDate = new Date(startDate.getTime() + duurMinuten * 60 * 1000);
     return {
       summary: title,
       start: { dateTime: startDate.toISOString(), timeZone: 'Europe/Amsterdam' },
@@ -163,11 +176,25 @@ function parseTextToEvent(text) {
   }
 }
 
+function levenshtein(a,b){
+  const dp=[...Array(a.length+1)].map(()=>Array(b.length+1).fill(0));
+  for(let i=0;i<=a.length;i++)dp[i][0]=i;
+  for(let j=0;j<=b.length;j++)dp[0][j]=j;
+  for(let i=1;i<=a.length;i++){
+    for(let j=1;j<=b.length;j++){
+      dp[i][j]=Math.min(
+        dp[i-1][j]+1,
+        dp[i][j-1]+1,
+        dp[i-1][j-1]+(a[i-1]==b[j-1]?0:1)
+      );
+    }
+  }
+  return dp[a.length][b.length];
+}
+
 function formatTimeNL(isoString) {
   const d = new Date(isoString);
-  const h = d.getHours().toString().padStart(2, '0');
-  const m = d.getMinutes().toString().padStart(2, '0');
-  return `${h}:${m}`;
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 }
 
 async function checkConflicts(event) {
@@ -210,7 +237,10 @@ async function addEvent() {
 
   const kleuren = ["1","2","3","4","5","6","7","8","9","10","11"];
   const kleurSelect = document.getElementById("kleur");
+  const duurSelect = document.getElementById("duur");
   const gekozen = kleurSelect.value === "random" ? kleuren[Math.floor(Math.random() * kleuren.length)] : kleurSelect.value;
+  const duurMinuten = parseInt(duurSelect.value);
+
   const text = document.getElementById("inputText").value.trim();
 
   if (!text) {
@@ -218,7 +248,7 @@ async function addEvent() {
     return;
   }
 
-  const event = parseTextToEvent(text);
+  const event = parseTextToEvent(text, duurMinuten);
   if (!event) return;
 
   event.colorId = gekozen;
