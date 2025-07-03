@@ -168,15 +168,17 @@ function parseTextToEvent(text) {
 
     // Dagdeel hints toepassen
     if (hint === "ochtend" && uur >= 12) uur -= 12;
-    if (hint === "middag" && uur < 12) uur += 12;
-    if (hint === "avond" && uur < 12) uur += 12;
-    if (hint === "nacht") uur = (uur + 24) % 24;
+    else if (hint === "middag" && uur < 12) uur += 12;
+    else if (hint === "avond" && uur < 12) uur += 12;
+    else if (hint === "nacht") uur = (uur + 24) % 24;
+    else if (!hint && uur < 8) uur += 12; // <-- nieuwe regel: standaard middag
 
     return {h: uur, m: min};
   }
 
   return null;
 })();
+
 
   if (!heleDag && !tijd) {
     alert("Kon geen geldige tijd vinden. Gebruik hh:mm of tekst als 'half 4' of 'half 4 ochtend'");
