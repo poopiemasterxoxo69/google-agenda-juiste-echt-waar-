@@ -12,23 +12,20 @@ body {
   padding: 20px;
 }
 h1 { text-align: center; }
-textarea, select, button, input {
+textarea, select, button {
   width: 100%;
   margin-top: 10px;
   font-size: 16px;
   padding: 10px;
-  box-sizing: border-box;
 }
-#kleur { margin-bottom: 10px; }
-label { font-weight: bold; display: block; margin-top: 10px; }
+#kleur { margin-bottom: 20px; }
+label { font-weight: bold; }
 </style>
 </head>
 <body>
 <h1>Agenda Tool</h1>
-
 <button onclick="handleAuthClick()">Log in met Google</button>
 <p id="status">Niet ingelogd</p>
-
 <textarea id="inputText" rows="4" placeholder="Bijv: kapper 5 juli om half 4 of vergadering 6 juli 14:00"></textarea>
 
 <label for="kleur">Kies kleur:</label>
@@ -48,9 +45,6 @@ label { font-weight: bold; display: block; margin-top: 10px; }
 </select>
 
 <label><input type="checkbox" id="heleDag"> Hele dag</label>
-
-<label for="duur">Duur (in minuten, standaard 60):</label>
-<input type="number" id="duur" min="1" placeholder="60">
 
 <button onclick="addEvent()">➕ Voeg toe aan agenda</button>
 
@@ -72,27 +66,123 @@ async function initializeGapiClient() {
 }
 
 window.onload = () => {
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: 'VUL-HIER-JE-CLIENT-ID-IN',
-    scope: 'https://www.googleapis.com/auth/calendar.events',
-    callback: (tokenResponse) => {
-      accessToken = tokenResponse.access_token;
-      document.getElementById("status").innerText = "Ingelogd ✔";
-    },
-  });
+  if (typeof google !== "undefined") {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
+      scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events',
+      callback: (tokenResponse) => {
+        accessToken = tokenResponse.access_token;
+        document.getElementById("status").innerText = "Ingelogd ✔";
+      },
+    });
+  }
 };
 
 function handleAuthClick() {
-  tokenClient.requestAccessToken();
+  if (tokenClient) {
+    tokenClient.requestAccessToken();
+  } else {
+    alert("Google auth is nog niet geladen.");
+  }
 }
 
-function levenshtein(a,b) {
-  const dp = Array.from({length:a.length+1},()=>Array(b.length+1).fill(0));
-  for (let i=0;i<=a.length;i++) dp[i][0]=i;
-  for (let j=0;j<=b.length;j++) dp[0][j]=j;
-  for (let i=1;i<=a.length;i++) {
-    for (let j=1;j<=b.length;j++) {
-      dp[i][j] = Math.min(
+function parseTextToEvent(text) {
+  const heleDag = document.getElementById("heleDag").checked;
+  text = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+  const title = text.split(/\d{1,2}[:;]/)[0].split("om")[0].trim() || "Gebeurtenis";
+
+  const monthMap = {
+    januari:0, februari:1, maart:2, april:3, mei:4, juni:5, juli:6,
+    augustus:7, september:8, oktober:9, november:10, december:11
+  };
+
+  const datum = (() => {
+    const today = new Date();
+
+    const dateMatch = text.match(/(\d{1,2})\s*(j[a-z]+)/i);
+    if (dateMatch) {
+      const day = parseInt(dateMatch[1]);
+      const monthName = Object.keys(monthMap).find(m => levenshtein(m, dateMatch[2]) <= 2);
+      if (monthName) {
+        return new Date(today.getFullYear(), monthMap[monthName], day);
+      }
+    }
+    return new Date();
+  })();
+
+  const tijd = (() => {
+    const hhmm = text.match(/(\d{1,2})[:;\s](\d{2})/);
+    let hint = '';
+    if (text.includes("ochtend")) hint = "ochtend";
+    if (text.includes("middag")) hint = "middag";
+    if (text.includes("avond")) hint = "avond";
+    if (text.includes("nacht")) hint = "nacht";
+
+    if (hhmm) {
+      let h = parseInt(hhmm[1]), m = parseInt(hhmm[2]);
+      if (!hint && h < 8) h += 12;
+      if (hint === "ochtend" && h >= 12) h -= 12;
+      if (hint === "avond" && h < 12) h += 12;
+      return {h, m};
+    }
+
+    const tekstTijd = text.match(/\b(half|kwart over|kwart voor)?\s*(\d{1,2})\b/);
+    if (tekstTijd) {
+      let uur = parseInt(tekstTijd[2]);
+      let min = 0;
+      const mod = tekstTijd[1] ? tekstTijd[1].toLowerCase() : '';
+      if (mod === 'half') {
+        uur = (uur - 1 + 24) % 24;
+        min = 30;
+      } else if (mod === 'kwart over') {
+        min = 15;
+      } else if (mod === 'kwart voor') {
+        uur = (uur - 1 + 24) % 24;
+        min = 45;
+      }
+
+      if (!hint && uur < 8) uur += 12;
+      if (hint === "ochtend" && uur >= 12) uur -= 12;
+      if (hint === "avond" && uur < 12) uur += 12;
+      return {h: uur, m: min};
+    }
+
+    return null;
+  })();
+
+  if (!heleDag && !tijd) {
+    alert("Kon geen geldige tijd vinden. Gebruik hh:mm of tekst als 'half 4' of 'half 4 ochtend'");
+    return null;
+  }
+
+  if (heleDag) {
+    const startDate = datum.toISOString().split("T")[0];
+    const endDate = new Date(datum.getTime() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    return {
+      summary: title,
+      start: { date: startDate },
+      end: { date: endDate }
+    };
+  } else {
+    datum.setHours(tijd.h, tijd.m, 0, 0);
+    const startDate = new Date(datum);
+    const endDate = new Date(startDate.getTime() + 30 * 60 * 1000);
+    return {
+      summary: title,
+      start: { dateTime: startDate.toISOString(), timeZone: 'Europe/Amsterdam' },
+      end: { dateTime: endDate.toISOString(), timeZone: 'Europe/Amsterdam' }
+    };
+  }
+}
+
+function levenshtein(a,b){
+  const dp=[...Array(a.length+1)].map(()=>Array(b.length+1).fill(0));
+  for(let i=0;i<=a.length;i++)dp[i][0]=i;
+  for(let j=0;j<=b.length;j++)dp[0][j]=j;
+  for(let i=1;i<=a.length;i++){
+    for(let j=1;j<=b.length;j++){
+      dp[i][j]=Math.min(
         dp[i-1][j]+1,
         dp[i][j-1]+1,
         dp[i-1][j-1]+(a[i-1]==b[j-1]?0:1)
@@ -102,109 +192,83 @@ function levenshtein(a,b) {
   return dp[a.length][b.length];
 }
 
-function parseTextToEvent(text) {
-  const heleDag = document.getElementById("heleDag").checked;
-  const duurMin = parseInt(document.getElementById("duur").value) || 60;
-
-  text = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  const title = text.split(/\d{1,2}[:;]/)[0].split("om")[0].trim() || "Gebeurtenis";
-
-  const monthMap = {
-    januari:0,februari:1,maart:2,april:3,mei:4,juni:5,juli:6,
-    augustus:7,september:8,oktober:9,november:10,december:11
-  };
-
-  const datum = (() => {
-    const today = new Date();
-    const m = text.match(/(\d{1,2})\s*([a-z]+)/i);
-    if (m) {
-      const dag = parseInt(m[1]);
-      const maand = Object.keys(monthMap).find(mon => levenshtein(mon,m[2])<=2);
-      if (maand) return new Date(today.getFullYear(),monthMap[maand],dag);
-    }
-    return today;
-  })();
-
-  const tijd = (() => {
-    const hhmm = text.match(/(\d{1,2})[:;\s](\d{2})/);
-    if (hhmm) return {h:parseInt(hhmm[1]),m:parseInt(hhmm[2])};
-
-    const mod = text.match(/\b(half|kwart over|kwart voor)?\s*(\d{1,2})\b/);
-    if (mod) {
-      let u = parseInt(mod[2]), m=0;
-      const t = mod[1];
-      if (t==="half") {u=(u+23)%24;m=30;}
-      if (t==="kwart over") {m=15;}
-      if (t==="kwart voor") {u=(u+23)%24;m=45;}
-      return {h:u,m};
-    }
-    return null;
-  })();
-
-  if (!heleDag && !tijd) {
-    alert("Kon geen tijd vinden.");
-    return null;
-  }
-
-  if (heleDag) {
-    const startDate = datum.toISOString().split("T")[0];
-    const endDate = new Date(datum.getTime() + 86400000).toISOString().split("T")[0];
-    return {summary:title,start:{date:startDate},end:{date:endDate}};
-  } else {
-    datum.setHours(tijd.h,tijd.m,0,0);
-    const start = new Date(datum);
-    const end = new Date(start.getTime() + duurMin*60000);
-    return {
-      summary:title,
-      start:{dateTime:start.toISOString(),timeZone:"Europe/Amsterdam"},
-      end:{dateTime:end.toISOString(),timeZone:"Europe/Amsterdam"}
-    };
-  }
+function formatTimeNL(isoString) {
+  const d = new Date(isoString);
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 }
 
 async function checkConflicts(event) {
-  const start = event.start.dateTime || (event.start.date+"T00:00:00Z");
-  const end = event.end.dateTime || (event.end.date+"T23:59:59Z");
-
+  const start = event.start.dateTime || (event.start.date + "T00:00:00Z");
+  const end = event.end.dateTime || (event.end.date + "T23:59:59Z");
   const res = await gapi.client.calendar.events.list({
-    calendarId:'primary',timeMin:start,timeMax:end,
-    singleEvents:true,orderBy:'startTime'
+    calendarId: 'primary',
+    timeMin: start,
+    timeMax: end,
+    singleEvents: true,
+    orderBy: 'startTime'
   });
 
-  const ns = new Date(start).getTime(), ne = new Date(end).getTime();
+  const newStart = new Date(start).getTime();
+  const newEnd = new Date(end).getTime();
+
   const conflicts = [];
+
   for (const item of res.result.items) {
-    const is = new Date(item.start.dateTime || item.start.date+"T00:00:00Z").getTime();
-    const ie = new Date(item.end.dateTime || item.end.date+"T23:59:59Z").getTime();
-    if (ns<ie && ne>is) conflicts.push(item);
+    const itemStart = new Date(item.start.dateTime || item.start.date + "T00:00:00Z").getTime();
+    const itemEnd = new Date(item.end.dateTime || item.end.date + "T23:59:59Z").getTime();
+
+    if (
+      (newStart < itemEnd && newEnd > itemStart) ||
+      Math.abs(newStart - itemEnd) < 30*60*1000 ||
+      Math.abs(itemStart - newEnd) < 30*60*1000
+    ) {
+      conflicts.push(item);
+    }
   }
+
   return conflicts;
 }
 
 async function addEvent() {
-  if (!accessToken) { alert("Log eerst in."); return; }
+  if (!accessToken) {
+    alert("Log eerst in met Google.");
+    return;
+  }
 
+  const kleuren = ["1","2","3","4","5","6","7","8","9","10","11"];
+  const kleurSelect = document.getElementById("kleur");
+  const gekozen = kleurSelect.value === "random" ? kleuren[Math.floor(Math.random() * kleuren.length)] : kleurSelect.value;
   const text = document.getElementById("inputText").value.trim();
-  if (!text) { alert("Voer tekst in."); return; }
+
+  if (!text) {
+    alert("Voer eerst een tekst in.");
+    return;
+  }
 
   const event = parseTextToEvent(text);
   if (!event) return;
 
-  const kleur = document.getElementById("kleur").value;
-  event.colorId = kleur==="random" ? String(1+Math.floor(Math.random()*11)) : kleur;
+  event.colorId = gekozen;
 
   const conflicts = await checkConflicts(event);
-  if (conflicts.length>0) {
-    let msg = "Conflicten gevonden:\n";
-    conflicts.forEach(c=>{
-      msg+=`- ${c.summary}\n`;
-    });
-    msg+="Toch toevoegen?";
+
+  if (conflicts.length > 0) {
+    let msg = `Er is al iets gepland rond dat tijdstip:\n\n`;
+    for (const c of conflicts) {
+      const tijd = c.start.dateTime || c.start.date + "T00:00:00Z";
+      msg += `- ${c.summary} (${formatTimeNL(tijd)})\n`;
+    }
+    msg += `\nToch toevoegen?`;
     if (!confirm(msg)) return;
   }
 
-  await gapi.client.calendar.events.insert({calendarId:"primary",resource:event});
-  alert("Toegevoegd!");
+  try {
+    await gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
+    alert("Event toegevoegd!");
+  } catch (error) {
+    console.error(error);
+    alert("Fout bij toevoegen van event.");
+  }
 }
 </script>
 </body>
