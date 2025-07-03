@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>Agenda Tool met Kleuren & Duur</title>
+<title>Agenda Tool met Kleuren</title>
 <style>
 body {
   font-family: sans-serif;
@@ -18,7 +18,7 @@ textarea, select, button {
   font-size: 16px;
   padding: 10px;
 }
-#kleur, #duur { margin-bottom: 20px; }
+#kleur { margin-bottom: 20px; }
 label { font-weight: bold; }
 </style>
 </head>
@@ -42,14 +42,6 @@ label { font-weight: bold; }
 <option value="4">🍇 Paars</option>
 <option value="1">💗 Roze</option>
 <option value="8">⚫ Grijs</option>
-</select>
-
-<label for="duur">Kies duur:</label>
-<select id="duur">
-<option value="15">15 minuten</option>
-<option value="30">30 minuten</option>
-<option value="60" selected>1 uur</option>
-<option value="120">2 uur</option>
 </select>
 
 <label><input type="checkbox" id="heleDag"> Hele dag</label>
@@ -86,7 +78,15 @@ window.onload = () => {
   }
 };
 
-function parseTextToEvent(text, duurMinuten) {
+function handleAuthClick() {
+  if (tokenClient) {
+    tokenClient.requestAccessToken();
+  } else {
+    alert("Google auth is nog niet geladen.");
+  }
+}
+
+function parseTextToEvent(text) {
   const heleDag = document.getElementById("heleDag").checked;
   text = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
@@ -94,7 +94,7 @@ function parseTextToEvent(text, duurMinuten) {
 
   const monthMap = {
     januari:0, februari:1, maart:2, april:3, mei:4, juni:5, juli:6,
-    augustus:7, september:8, oktober:10, november:10, december:11
+    augustus:7, september:8, oktober:9, november:10, december:11
   };
 
   const datum = (() => {
@@ -167,7 +167,7 @@ function parseTextToEvent(text, duurMinuten) {
   } else {
     datum.setHours(tijd.h, tijd.m, 0, 0);
     const startDate = new Date(datum);
-    const endDate = new Date(startDate.getTime() + duurMinuten * 60 * 1000);
+    const endDate = new Date(startDate.getTime() + 30 * 60 * 1000);
     return {
       summary: title,
       start: { dateTime: startDate.toISOString(), timeZone: 'Europe/Amsterdam' },
@@ -237,10 +237,7 @@ async function addEvent() {
 
   const kleuren = ["1","2","3","4","5","6","7","8","9","10","11"];
   const kleurSelect = document.getElementById("kleur");
-  const duurSelect = document.getElementById("duur");
   const gekozen = kleurSelect.value === "random" ? kleuren[Math.floor(Math.random() * kleuren.length)] : kleurSelect.value;
-  const duurMinuten = parseInt(duurSelect.value);
-
   const text = document.getElementById("inputText").value.trim();
 
   if (!text) {
@@ -248,7 +245,7 @@ async function addEvent() {
     return;
   }
 
-  const event = parseTextToEvent(text, duurMinuten);
+  const event = parseTextToEvent(text);
   if (!event) return;
 
   event.colorId = gekozen;
