@@ -144,42 +144,60 @@ function parseTextToEvent(text) {
   if (text.includes("avond")) hint = "avond";
   if (text.includes("nacht")) hint = "nacht";
 
+  console.log(`hint gedetecteerd: ${hint || '(geen hint)'}`);
+
   const hhmm = text.match(/(\d{1,2})[:;\s](\d{2})/);
   if (hhmm) {
     let h = parseInt(hhmm[1]), m = parseInt(hhmm[2]);
+    console.log(`hh:mm patroon gevonden: ${h}:${m}`);
     return {h, m};
   }
 
   const tekstTijd = text.match(/\b(half|kwart over|kwart voor)?\s*(\d{1,2})\b/);
   if (tekstTijd) {
+    const mod = tekstTijd[1] ? tekstTijd[1].toLowerCase() : '';
     let uur = parseInt(tekstTijd[2]);
     let min = 0;
-    const mod = tekstTijd[1] ? tekstTijd[1].toLowerCase() : '';
+
+    console.log(`tekst patroon gevonden: modifier=${mod}, uur=${uur}`);
 
     // bepaal minuten en corrigeer uur voor half/kwart
     if (mod === 'half') {
       uur = uur - 1;
       min = 30;
+      console.log(`'half' gevonden → uur=${uur}, min=${min}`);
     } else if (mod === 'kwart over') {
       min = 15;
+      console.log(`'kwart over' gevonden → uur=${uur}, min=${min}`);
     } else if (mod === 'kwart voor') {
       uur = uur - 1;
       min = 45;
+      console.log(`'kwart voor' gevonden → uur=${uur}, min=${min}`);
     }
 
-    if (uur <= 0) uur += 12; // fallback voor 'half 1'
+    if (uur <= 0) uur += 12; // fallback
+    console.log(`na half/kwart correctie → uur=${uur}, min=${min}`);
 
-    // pas dagdeel hints of standaard-middag toe ná half/kwart
-    if (hint === "ochtend" && uur >= 12) uur -= 12;
-    else if (hint === "middag" && uur < 12) uur += 12;
-    else if (hint === "avond" && uur < 12) uur += 12;
-    else if (!hint && uur < 8) uur += 12; // standaard middag
+    // pas hints of standaard middag toe ná half/kwart
+    if (hint === "ochtend" && uur >= 12) {
+      uur -= 12;
+      console.log(`hint=ochtend, corrigeer naar ${uur}`);
+    } else if ((hint === "middag" || hint === "avond") && uur < 12) {
+      uur += 12;
+      console.log(`hint=${hint}, corrigeer naar ${uur}`);
+    } else if (!hint && uur < 8) {
+      uur += 12;
+      console.log(`geen hint & uur<8 → middag: ${uur}`);
+    }
 
+    console.log(`definitieve tijd: ${uur}:${min}`);
     return {h: uur, m: min};
   }
 
+  console.log(`geen tijdspatroon gevonden`);
   return null;
 })();
+
 
 
   if (!heleDag && !tijd) {
