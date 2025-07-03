@@ -98,19 +98,19 @@ function parseTextToEvent(text) {
   };
 
   const datum = (() => {
-    const today = new Date();
+  const today = new Date();
+  today.setHours(0,0,0,0);
 
-    const dateMatch = text.match(/(\d{1,2})\s*(j[a-z]+)/i);
-    if (dateMatch) {
-      const day = parseInt(dateMatch[1]);
-      const maandTekst = dateMatch[2].toLowerCase();
+  const dateMatch = text.match(/(\d{1,2})\s*(j[a-z]+)/i);
+  if (dateMatch) {
+    const day = parseInt(dateMatch[1]);
+    const maandTekst = dateMatch[2].toLowerCase();
 
-      // Eerst exact match
-      if (monthMap.hasOwnProperty(maandTekst)) {
-        return new Date(today.getFullYear(), monthMap[maandTekst], day);
-      }
+    let maandIndex = null;
 
-      // Anders: beste fuzzy match
+    if (monthMap.hasOwnProperty(maandTekst)) {
+      maandIndex = monthMap[maandTekst];
+    } else {
       let beste = null, besteAfstand = Infinity;
       for (const m of Object.keys(monthMap)) {
         const afstand = levenshtein(m, maandTekst);
@@ -120,11 +120,22 @@ function parseTextToEvent(text) {
         }
       }
       if (beste && besteAfstand <= 2) {
-        return new Date(today.getFullYear(), monthMap[beste], day);
+        maandIndex = monthMap[beste];
       }
     }
-    return new Date();
-  })();
+
+    if (maandIndex !== null) {
+      let jaar = today.getFullYear();
+      const kandidaat = new Date(jaar, maandIndex, day);
+      if (kandidaat < today) {
+        kandidaat.setFullYear(jaar + 1);
+      }
+      return kandidaat;
+    }
+  }
+
+  return new Date();
+})();
 
   const tijd = (() => {
     const hhmm = text.match(/(\d{1,2})[:;\s](\d{2})/);
