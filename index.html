@@ -86,6 +86,49 @@ function handleAuthClick() {
   }
 }
 
+function levenshtein(a,b){
+  const dp=[...Array(a.length+1)].map(()=>Array(b.length+1).fill(0));
+  for(let i=0;i<=a.length;i++)dp[i][0]=i;
+  for(let j=0;j<=b.length;j++)dp[0][j]=j;
+  for(let i=1;i<=a.length;i++){
+    for(let j=1;j<=b.length;j++){
+      dp[i][j]=Math.min(
+        dp[i-1][j]+1,
+        dp[i][j-1]+1,
+        dp[i-1][j-1]+(a[i-1]==b[j-1]?0:1)
+      );
+    }
+  }
+  return dp[a.length][b.length];
+}
+
+function detecteerTijdModifier(tekst) {
+  const opties = ['half', 'kwart over', 'kwart voor'];
+  let beste = null, besteAfstand = Infinity;
+
+  for (const optie of opties) {
+    const afstand = levenshtein(tekst, optie);
+    if (afstand < besteAfstand && afstand <= 2) {
+      besteAfstand = afstand;
+      beste = optie;
+    }
+  }
+
+  if (beste) {
+    console.log(`fuzzy gevonden modifier: ${beste}`);
+    return beste;
+  }
+
+  for (const optie of opties) {
+    if (tekst.includes(optie)) {
+      console.log(`exact gevonden modifier: ${optie}`);
+      return optie;
+    }
+  }
+
+  return null;
+}
+
 function parseTextToEvent(text) {
   const heleDag = document.getElementById("heleDag").checked;
   text = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -98,106 +141,96 @@ function parseTextToEvent(text) {
   };
 
   const datum = (() => {
-  const today = new Date();
-  today.setHours(0,0,0,0);
+    const today = new Date();
+    today.setHours(0,0,0,0);
 
-  const dateMatch = text.match(/(\d{1,2})\s*(j[a-z]+)/i);
-  if (dateMatch) {
-    const day = parseInt(dateMatch[1]);
-    const maandTekst = dateMatch[2].toLowerCase();
+    const dateMatch = text.match(/(\d{1,2})\s*(j[a-z]+)/i);
+    if (dateMatch) {
+      const day = parseInt(dateMatch[1]);
+      const maandTekst = dateMatch[2].toLowerCase();
 
-    let maandIndex = null;
+      let maandIndex = null;
 
-    if (monthMap.hasOwnProperty(maandTekst)) {
-      maandIndex = monthMap[maandTekst];
-    } else {
-      let beste = null, besteAfstand = Infinity;
-      for (const m of Object.keys(monthMap)) {
-        const afstand = levenshtein(m, maandTekst);
-        if (afstand < besteAfstand) {
-          besteAfstand = afstand;
-          beste = m;
+      if (monthMap.hasOwnProperty(maandTekst)) {
+        maandIndex = monthMap[maandTekst];
+      } else {
+        let beste = null, besteAfstand = Infinity;
+        for (const m of Object.keys(monthMap)) {
+          const afstand = levenshtein(m, maandTekst);
+          if (afstand < besteAfstand) {
+            besteAfstand = afstand;
+            beste = m;
+          }
+        }
+        if (beste && besteAfstand <= 2) {
+          maandIndex = monthMap[beste];
         }
       }
-      if (beste && besteAfstand <= 2) {
-        maandIndex = monthMap[beste];
+
+      if (maandIndex !== null) {
+        let jaar = today.getFullYear();
+        const kandidaat = new Date(jaar, maandIndex, day);
+        if (kandidaat < today) {
+          kandidaat.setFullYear(jaar + 1);
+        }
+        return kandidaat;
       }
     }
 
-    if (maandIndex !== null) {
-      let jaar = today.getFullYear();
-      const kandidaat = new Date(jaar, maandIndex, day);
-      if (kandidaat < today) {
-        kandidaat.setFullYear(jaar + 1);
-      }
-      return kandidaat;
-    }
-  }
-
-  return new Date();
-})();
+    return new Date();
+  })();
 
   const tijd = (() => {
-  let hint = '';
-  if (text.includes("ochtend")) hint = "ochtend";
-  if (text.includes("middag")) hint = "middag";
-  if (text.includes("avond")) hint = "avond";
-  if (text.includes("nacht")) hint = "nacht";
+    let hint = '';
+    if (text.includes("ochtend")) hint = "ochtend";
+    if (text.includes("middag")) hint = "middag";
+    if (text.includes("avond")) hint = "avond";
+    if (text.includes("nacht")) hint = "nacht";
 
-  console.log(`hint gedetecteerd: ${hint || '(geen hint)'}`);
+    console.log(`hint gedetecteerd: ${hint || '(geen hint)'}`);
 
-  const hhmm = text.match(/(\d{1,2})[:;\s](\d{2})/);
-  if (hhmm) {
-    let h = parseInt(hhmm[1]), m = parseInt(hhmm[2]);
-    console.log(`hh:mm patroon gevonden: ${h}:${m}`);
-    return {h, m};
-  }
+    const hhmm = text.match(/(\d{1,2})[:;\s](\d{2})/);
+    if (hhmm) {
+      let h = parseInt(hhmm[1]), m = parseInt(hhmm[2]);
+      console.log(`hh:mm patroon gevonden: ${h}:${m}`);
+      return {h, m};
+    }
 
-  const uurMatch = text.match(/(\d{1,2})/);
-  if (!uurMatch) {
-    console.log(`geen tijd gevonden`);
-    return null;
-  }
+    const uurMatch = text.match(/(\d{1,2})/);
+    if (!uurMatch) {
+      console.log(`geen tijd gevonden`);
+      return null;
+    }
 
-  let uur = parseInt(uurMatch[1]);
-  let min = 0;
+    let uur = parseInt(uurMatch[1]);
+    let min = 0;
 
-  const modifier = detecteerTijdModifier(text);
-  console.log(`gedetecteerde modifier: ${modifier || '(geen)'}, uur=${uur}`);
+    const modifier = detecteerTijdModifier(text);
+    console.log(`gedetecteerde modifier: ${modifier || '(geen)'}, uur=${uur}`);
 
-  if (modifier === 'half') {
-    uur -= 1;
-    min = 30;
-    console.log(`modifier=half → uur=${uur}, min=${min}`);
-  } else if (modifier === 'kwart over') {
-    min = 15;
-    console.log(`modifier=kwart over → uur=${uur}, min=${min}`);
-  } else if (modifier === 'kwart voor') {
-    uur -= 1;
-    min = 45;
-    console.log(`modifier=kwart voor → uur=${uur}, min=${min}`);
-  }
+    if (modifier === 'half') {
+      uur = uur > 1 ? uur - 1 : 12;
+      min = 30;
+    } else if (modifier === 'kwart over') {
+      min = 15;
+    } else if (modifier === 'kwart voor') {
+      uur = uur > 1 ? uur - 1 : 12;
+      min = 45;
+    }
 
-  if (uur <= 0) uur += 12;
+    if (uur <= 0) uur = 12;
 
-  if (hint === "ochtend" && uur >= 12) {
-    uur -= 12;
-    console.log(`hint=ochtend, corrigeer naar ${uur}`);
-  } else if ((hint === "middag" || hint === "avond") && uur < 12) {
-    uur += 12;
-    console.log(`hint=${hint}, corrigeer naar ${uur}`);
-  } else if (!hint && uur < 8) {
-    uur += 12;
-    console.log(`geen hint & uur<8 → middag: ${uur}`);
-  }
+    if (hint === "ochtend" && uur >= 12) {
+      uur -= 12;
+    } else if ((hint === "middag" || hint === "avond") && uur < 12) {
+      uur += 12;
+    } else if (!hint && uur < 8) {
+      uur += 12;
+    }
 
-  console.log(`definitieve tijd: ${uur}:${min}`);
-  return {h: uur, m: min};
-})();
-
-
-
-
+    console.log(`definitieve tijd: ${uur}:${min}`);
+    return {h: uur, m: min};
+  })();
 
   if (!heleDag && !tijd) {
     alert("Kon geen geldige tijd vinden. Gebruik hh:mm of tekst als 'half 4' of 'half 4 ochtend'");
@@ -222,22 +255,6 @@ function parseTextToEvent(text) {
       end: { dateTime: endDate.toISOString(), timeZone: 'Europe/Amsterdam' }
     };
   }
-}
-
-function levenshtein(a,b){
-  const dp=[...Array(a.length+1)].map(()=>Array(b.length+1).fill(0));
-  for(let i=0;i<=a.length;i++)dp[i][0]=i;
-  for(let j=0;j<=b.length;j++)dp[0][j]=j;
-  for(let i=1;i<=a.length;i++){
-    for(let j=1;j<=b.length;j++){
-      dp[i][j]=Math.min(
-        dp[i-1][j]+1,
-        dp[i][j-1]+1,
-        dp[i-1][j-1]+(a[i-1]==b[j-1]?0:1)
-      );
-    }
-  }
-  return dp[a.length][b.length];
 }
 
 function formatTimeNL(isoString) {
@@ -318,6 +335,8 @@ async function addEvent() {
     alert("Fout bij toevoegen van event.");
   }
 }
+</script>
+
 </script>
 </body>
 </html>
