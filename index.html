@@ -156,6 +156,7 @@ function parseTextToEvent(text) {
     let min = 0;
     const mod = tekstTijd[1] ? tekstTijd[1].toLowerCase() : '';
 
+    // bepaal minuten en corrigeer uur voor half/kwart
     if (mod === 'half') {
       uur = uur - 1;
       min = 30;
@@ -168,11 +169,11 @@ function parseTextToEvent(text) {
 
     if (uur <= 0) uur += 12; // fallback voor 'half 1'
 
-    // Dagdeel hints toepassen
+    // pas dagdeel hints of standaard-middag toe ná half/kwart
     if (hint === "ochtend" && uur >= 12) uur -= 12;
     else if (hint === "middag" && uur < 12) uur += 12;
     else if (hint === "avond" && uur < 12) uur += 12;
-    else if (!hint && uur < 8) uur += 12; // standaard middag als geen hint
+    else if (!hint && uur < 8) uur += 12; // standaard middag
 
     return {h: uur, m: min};
   }
