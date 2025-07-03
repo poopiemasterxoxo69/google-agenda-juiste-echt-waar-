@@ -1,289 +1,258 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-<meta charset="UTF-8">
-<title>Agenda Tool met Kleuren</title>
-<style>
-body {
-  font-family: sans-serif;
-  background-color: #f5f5f5;
-  max-width: 700px;
-  margin: auto;
-  padding: 20px;
-}
-h1 { text-align: center; }
-textarea, select, button {
-  width: 100%;
-  margin-top: 10px;
-  font-size: 16px;
-  padding: 10px;
-}
-#kleur { margin-bottom: 20px; }
-label { font-weight: bold; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agenda Parser</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #f5f5f5;
+      max-width: 700px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    input, select, button {
+      width: 100%;
+      font-size: 16px;
+      padding: 12px;
+      margin-top: 10px;
+      margin-bottom: 15px;
+      box-sizing: border-box;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 10px;
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #result {
+      background: white;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 20px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+  </style>
 </head>
 <body>
-<h1>Agenda Tool</h1>
-<button onclick="handleAuthClick()">Log in met Google</button>
-<p id="status">Niet ingelogd</p>
-<textarea id="inputText" rows="4" placeholder="Bijv: kapper 5 juli om half 4 of vergadering 6 juli 14:00"></textarea>
 
-<label for="kleur">Kies kleur:</label>
-<select id="kleur">
-<option value="random" selected>🎲 Willekeurig</option>
-<option value="11">❤️ Rood</option>
-<option value="6">🟧 Oranje</option>
-<option value="5">💛 Geel</option>
-<option value="10">💚 Donkergroen</option>
-<option value="2">💚 Lichtgroen</option>
-<option value="9">💙 Blauw</option>
-<option value="7">🫐 Bosbes</option>
-<option value="3">💜 Lavendel</option>
-<option value="4">🍇 Paars</option>
-<option value="1">💗 Roze</option>
-<option value="8">⚫ Grijs</option>
-</select>
+  <h2>Voer een gebeurtenis in:</h2>
 
-<label><input type="checkbox" id="heleDag"> Hele dag</label>
+  <input type="text" id="eventInput" placeholder="bijv: kapper 4 juli om 10:30" />
 
-<button onclick="addEvent()">➕ Voeg toe aan agenda</button>
+  <label for="color">Kies een kleur:</label>
+  <select id="color">
+    <option value="random">🎲 Willekeurig</option>
+    <option value="11">❤️ Rood</option>
+    <option value="6">🟧 Oranje</option>
+    <option value="5">💛 Geel</option>
+    <option value="10">💚 Donkergroen</option>
+    <option value="2">💚 Lichtgroen</option>
+    <option value="9">💙 Blauw</option>
+    <option value="7">🫐 Bosbes</option>
+    <option value="3">💜 Lavendel</option>
+    <option value="4">🍇 Paars</option>
+    <option value="1">💗 Roze</option>
+    <option value="8">⚫ Grijs</option>
+  </select>
 
-<script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<script>
-let tokenClient;
-let accessToken = null;
+  <label for="duration">Kies duur:</label>
+  <select id="duration">
+    <option value="1 uur">1 uur</option>
+    <option value="2 uur">2 uur</option>
+    <option value="3 uur">3 uur</option>
+  </select>
 
-function gapiLoaded() {
-  gapi.load('client', initializeGapiClient);
-}
+  <button id="parseBtn">➕ Parse gebeurtenis</button>
 
-async function initializeGapiClient() {
-  await gapi.client.init({
-    apiKey: '',
-    discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
+  <div id="result"></div>
+
+  <script>
+document.getElementById("parseBtn").addEventListener("click", () => {
+  const input = document.getElementById("eventInput").value.trim();
+  const color = document.getElementById("color").value;
+  const duration = document.getElementById("duration").value;
+
+  const events = parseMultipleEvents(input);
+  const resultDiv = document.getElementById("result");
+  resultDiv.innerHTML = "";
+
+  events.forEach((event, i) => {
+    event.kleur = color;
+    event.duur = duration;
+
+    resultDiv.innerHTML += `
+      <div style="margin-bottom:10px;padding:10px;border-left:5px solid #007bff;background:#fff">
+        <strong>${event.naam}</strong><br>
+        📅 ${event.datum}<br>
+        ⏰ ${event.tijd}<br>
+        ⏳ ${event.duur}<br>
+        🎨 Kleur: ${event.kleur}
+      </div>
+    `;
+
+    console.log(`📝 [${i + 1}] Naam: ${event.naam}`);
+    console.log(`📅 Datum: ${event.datum}`);
+    console.log(`⏰ Tijd: ${event.tijd}`);
+    console.log(`⏳ Duur: ${event.duur}`);
+    console.log(`🎨 Kleur: ${event.kleur}`);
   });
-}
+});
 
-window.onload = () => {
-  if (typeof google !== "undefined") {
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
-      scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events',
-      callback: (tokenResponse) => {
-        accessToken = tokenResponse.access_token;
-        document.getElementById("status").innerText = "Ingelogd ✔";
-      },
-    });
-  }
-};
+function parseMultipleEvents(inputText) {
+  const chunks = inputText.split(/[,;\n]/).map(c => c.trim()).filter(Boolean);
+  let mainSubject = "";
+  const events = [];
 
-function handleAuthClick() {
-  if (tokenClient) {
-    tokenClient.requestAccessToken();
-  } else {
-    alert("Google auth is nog niet geladen.");
-  }
-}
-
-function levenshtein(a,b){
-  const dp=[...Array(a.length+1)].map(()=>Array(b.length+1).fill(0));
-  for(let i=0;i<=a.length;i++)dp[i][0]=i;
-  for(let j=0;j<=b.length;j++)dp[0][j]=j;
-  for(let i=1;i<=a.length;i++){
-    for(let j=1;j<=b.length;j++){
-      dp[i][j]=Math.min(
-        dp[i-1][j]+1,
-        dp[i][j-1]+1,
-        dp[i-1][j-1]+(a[i-1]==b[j-1]?0:1)
-      );
+  for (let chunk of chunks) {
+    const event = parseTextToEvent(chunk);
+    if (event.naam.toLowerCase() !== "onbekend") {
+      mainSubject = event.naam;
+    } else if (mainSubject) {
+      event.naam = mainSubject;
     }
-  }
-  return dp[a.length][b.length];
-}
-
-function detecteerTijdModifier(tekst) {
-  tekst = tekst.toLowerCase();
-  const opties = ['half', 'kwart over', 'kwart voor'];
-
-  for (const optie of opties) {
-    if (tekst.includes(optie)) {
-      console.log(`exact gevonden modifier: ${optie}`);
-      return optie;
-    }
+    events.push(event);
   }
 
-  let beste = null, besteAfstand = Infinity;
-  const woorden = tekst.split(/\s+/);
-
-  for (const woord of woorden) {
-    for (const optie of opties) {
-      const afstand = levenshtein(woord, optie);
-      if (afstand < besteAfstand && afstand <= 2) {
-        besteAfstand = afstand;
-        beste = optie;
-      }
-    }
-  }
-
-  if (beste) {
-    console.log(`fuzzy gevonden modifier: ${beste}`);
-    return beste;
-  }
-
-  return null;
+  return events;
 }
 
 function parseTextToEvent(text) {
-  const heleDag = document.getElementById("heleDag").checked;
-  text = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const origText = text.trim();
+  let lower = origText.toLowerCase();
+  const vandaag = new Date();
+  let datum = vandaag;
+  let datumStr = "";
 
-  const title = text.split(/\d{1,2}[:;]/)[0].split("om")[0].trim() || "Gebeurtenis";
+  const maanden = [
+    ['januari','jan'], ['februari','feb'], ['maart','mrt'], ['april','apr'],
+    ['mei'], ['juni','jun'], ['juli','jul'], ['augustus','aug'],
+    ['september','sep','sept'], ['oktober','okt'], ['november','nov'], ['december','dec']
+  ];
+  const maandRegexParts = maanden.flat().join("|");
 
-  const monthMap = {
-    januari:0, februari:1, maart:2, april:3, mei:4, juni:5, juli:6,
-    augustus:7, september:8, oktober:9, november:10, december:11
-  };
+  let m = lower.match(/(\d{1,2})[\/\-\s](\d{1,2})(?:[\/\-\s](\d{2,4}))?/);
+  let m2 = lower.match(new RegExp(`(\\d{1,2})\\s*(${maandRegexParts})`));
 
-  const datum = (() => {
-    const today = new Date();
-    today.setHours(0,0,0,0);
-
-    const dateMatch = text.match(/(\d{1,2})\s*(j[a-z]+)/i);
-    if (dateMatch) {
-      const day = parseInt(dateMatch[1]);
-      const maandTekst = dateMatch[2].toLowerCase();
-
-      let maandIndex = monthMap[maandTekst];
-      if (maandIndex === undefined) {
-        let beste = null, besteAfstand = Infinity;
-        for (const m of Object.keys(monthMap)) {
-          const afstand = levenshtein(m, maandTekst);
-          if (afstand < besteAfstand) {
-            besteAfstand = afstand;
-            beste = m;
-          }
-        }
-        if (beste && besteAfstand <= 2) maandIndex = monthMap[beste];
-      }
-
-      if (maandIndex !== undefined) {
-        let jaar = today.getFullYear();
-        const kandidaat = new Date(jaar, maandIndex, day);
-        if (kandidaat < today) kandidaat.setFullYear(jaar + 1);
-        return kandidaat;
+  if (m) {
+    const d = parseInt(m[1]);
+    const mo = parseInt(m[2]) - 1;
+    const y = m[3] ? parseInt(m[3]) : vandaag.getFullYear();
+    datum = new Date(y, mo, d);
+    lower = lower.replace(m[0], "");
+  } else if (m2) {
+    const d = parseInt(m2[1]);
+    let mo = 0;
+    for(let i=0; i<maanden.length; i++) {
+      if (maanden[i].includes(m2[2])) {
+        mo = i;
+        break;
       }
     }
-
-    return new Date();
-  })();
-
-  const tijd = (() => {
-    let hint = '';
-    if (text.includes("ochtend")) hint = "ochtend";
-    if (text.includes("middag")) hint = "middag";
-    if (text.includes("avond")) hint = "avond";
-    if (text.includes("nacht")) hint = "nacht";
-
-    console.log(`hint gedetecteerd: ${hint || '(geen hint)'}`);
-
-    const hhmm = text.match(/(\d{1,2})[:;\s](\d{2})/);
-    if (hhmm) {
-      let h = parseInt(hhmm[1]), m = parseInt(hhmm[2]);
-      console.log(`hh:mm patroon gevonden: ${h}:${m}`);
-      return {h, m};
-    }
-
-    const uurMatch = text.match(/(\d{1,2})/);
-    if (!uurMatch) {
-      console.log(`geen tijd gevonden`);
-      return null;
-    }
-
-    let uur = parseInt(uurMatch[1]);
-    let min = 0;
-
-    const modifier = detecteerTijdModifier(text);
-    console.log(`gedetecteerde modifier: ${modifier || '(geen)'}, uur=${uur}`);
-
-    if (modifier === 'half') {
-      uur = uur > 1 ? uur - 1 : 12;
-      min = 30;
-    } else if (modifier === 'kwart over') {
-      min = 15;
-    } else if (modifier === 'kwart voor') {
-      uur = uur > 1 ? uur - 1 : 12;
-      min = 45;
-    }
-
-    if (uur <= 0) uur = 12;
-
-    if (hint === "ochtend" && uur >= 12) {
-      uur -= 12;
-    } else if ((hint === "middag" || hint === "avond") && uur < 12) {
-      uur += 12;
-    } else if (!hint && uur < 8) {
-      uur += 12;
-    }
-
-    console.log(`definitieve tijd: ${uur}:${min}`);
-    return {h: uur, m: min};
-  })();
-
-  if (!heleDag && !tijd) {
-    alert("Kon geen geldige tijd vinden. Gebruik hh:mm of tekst als 'half 4' of 'half 4 ochtend'");
-    return null;
-  }
-
-  if (heleDag) {
-    const startDate = datum.toISOString().split("T")[0];
-    const endDate = new Date(datum.getTime() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-    return {
-      summary: title,
-      start: { date: startDate },
-      end: { date: endDate }
-    };
+    datum = new Date(vandaag.getFullYear(), mo, d);
+    lower = lower.replace(m2[0], "");
   } else {
-    datum.setHours(tijd.h, tijd.m, 0, 0);
-    const startDate = new Date(datum);
-    const endDate = new Date(startDate.getTime() + 30 * 60 * 1000);
-    return {
-      summary: title,
-      start: { dateTime: startDate.toISOString(), timeZone: 'Europe/Amsterdam' },
-      end: { dateTime: endDate.toISOString(), timeZone: 'Europe/Amsterdam' }
-    };
-  }
-}
-
-async function addEvent() {
-  if (!accessToken) {
-    alert("Log eerst in met Google.");
-    return;
+    const dagen = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
+    for (let i = 0; i < dagen.length; i++) {
+      if (lower.includes(dagen[i])) {
+        const vandaagIndex = vandaag.getDay();
+        const diff = (i - vandaagIndex + 7) % 7 || 7;
+        const nieuweDatum = new Date(vandaag);
+        nieuweDatum.setDate(vandaag.getDate() + diff);
+        datum = nieuweDatum;
+        lower = lower.replace(dagen[i], "");
+        break;
+      }
+    }
   }
 
-  const kleuren = ["1","2","3","4","5","6","7","8","9","10","11"];
-  const kleurSelect = document.getElementById("kleur");
-  const gekozen = kleurSelect.value === "random" ? kleuren[Math.floor(Math.random() * kleuren.length)] : kleurSelect.value;
-  const text = document.getElementById("inputText").value.trim();
+  datumStr = `${datum.getDate()}-${datum.getMonth() + 1}-${datum.getFullYear()}`;
+  let tijd = "Hele dag";
 
-  if (!text) {
-    alert("Voer eerst een tekst in.");
-    return;
+  const exactTimeMatch = lower.match(/(\d{1,2})[:\.](\d{2})/);
+  if (exactTimeMatch) {
+    tijd = exactTimeMatch[1].padStart(2, '0') + ":" + exactTimeMatch[2];
+    lower = lower.replace(exactTimeMatch[0], "");
+  } else {
+    let complexMatch = lower.match(/(\d{1,2})\s*over\s*half\s*(\d{1,2})/);
+    if (complexMatch) {
+      const over = parseInt(complexMatch[1]);
+      const uur = parseInt(complexMatch[2]) - 1;
+      const min = 30 + over;
+      tijd = `${uur.toString().padStart(2,'0')}:${min.toString().padStart(2,'0')}`;
+      lower = lower.replace(complexMatch[0], "");
+    } else {
+      complexMatch = lower.match(/(\d{1,2})\s*over\s*(\d{1,2})/);
+      if (complexMatch) {
+        const min = parseInt(complexMatch[1]);
+        const uur = parseInt(complexMatch[2]);
+        tijd = `${uur.toString().padStart(2,'0')}:${min.toString().padStart(2,'0')}`;
+        lower = lower.replace(complexMatch[0], "");
+      } else if (lower.includes("half")) {
+        const uurMatch = lower.match(/half\s*(\d{1,2})/);
+        if (uurMatch) {
+          const h = parseInt(uurMatch[1]) - 1;
+          tijd = h.toString().padStart(2,'0') + ":30";
+          lower = lower.replace(uurMatch[0], "");
+        }
+      } else if (lower.includes("kwart over")) {
+        const uurMatch = lower.match(/kwart over\s*(\d{1,2})/);
+        if (uurMatch) {
+          tijd = uurMatch[1].padStart(2,'0') + ":15";
+          lower = lower.replace(uurMatch[0], "");
+        }
+      } else if (lower.includes("kwart voor")) {
+        const uurMatch = lower.match(/kwart voor\s*(\d{1,2})/);
+        if (uurMatch) {
+          const h = parseInt(uurMatch[1])-1;
+          tijd = h.toString().padStart(2,'0') + ":45";
+          lower = lower.replace(uurMatch[0], "");
+        }
+      }
+    }
   }
 
-  const event = parseTextToEvent(text);
-  if (!event) return;
+  const stopWords = [
+    "om", "op", "de", "het", "half", "kwart", "over", "voor",
+    "uur", "heledag", "hele", "dag", "in", "te", "tot",
+    "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"
+  ];
 
-  event.colorId = gekozen;
+  const maandWoorden = maanden.flat();
+  const stopRegexWords = [...stopWords, ...maandWoorden].join("|");
 
-  try {
-    await gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
-    alert("Event toegevoegd!");
-  } catch (error) {
-    console.error(error);
-    alert("Fout bij toevoegen van event.");
-  }
+  let naam = lower
+    .replace(new RegExp(`\\b(${stopRegexWords})\\b`, "g"), "")
+    .replace(/\b([1-9]|[12][0-9]|3[01])\b/g, "")
+    .replace(/\b\d{1,2}[:\.]\d{2}\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!naam) naam = "Onbekend";
+
+  return { naam, datum: datumStr, tijd };
 }
 </script>
+
 </body>
 </html>
