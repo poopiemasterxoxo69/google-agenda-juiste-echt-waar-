@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>Agenda Tool met Kleuren</title>
+<title>Agenda Tool met Kleuren & Duur</title>
 <style>
 body {
   font-family: sans-serif;
@@ -18,7 +18,7 @@ textarea, select, button {
   font-size: 16px;
   padding: 10px;
 }
-#kleur { margin-bottom: 20px; }
+#kleur, #duur { margin-bottom: 20px; }
 label { font-weight: bold; }
 </style>
 </head>
@@ -26,6 +26,7 @@ label { font-weight: bold; }
 <h1>Agenda Tool</h1>
 <button onclick="handleAuthClick()">Log in met Google</button>
 <p id="status">Niet ingelogd</p>
+
 <textarea id="inputText" rows="4" placeholder="Bijv: kapper 5 juli om half 4 of vergadering 6 juli 14:00"></textarea>
 
 <label for="kleur">Kies kleur:</label>
@@ -42,6 +43,14 @@ label { font-weight: bold; }
 <option value="4">🍇 Paars</option>
 <option value="1">💗 Roze</option>
 <option value="8">⚫ Grijs</option>
+</select>
+
+<label for="duur">Kies duur (minuten):</label>
+<select id="duur">
+<option value="30">30 minuten</option>
+<option value="60" selected>1 uur</option>
+<option value="90">1,5 uur</option>
+<option value="120">2 uur</option>
 </select>
 
 <label><input type="checkbox" id="heleDag"> Hele dag</label>
@@ -88,6 +97,8 @@ function handleAuthClick() {
 
 function parseTextToEvent(text) {
   const heleDag = document.getElementById("heleDag").checked;
+  const duurMin = parseInt(document.getElementById("duur").value);
+
   text = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
   const title = text.split(/\d{1,2}[:;]/)[0].split("om")[0].trim() || "Gebeurtenis";
@@ -167,7 +178,7 @@ function parseTextToEvent(text) {
   } else {
     datum.setHours(tijd.h, tijd.m, 0, 0);
     const startDate = new Date(datum);
-    const endDate = new Date(startDate.getTime() + 30 * 60 * 1000);
+    const endDate = new Date(startDate.getTime() + duurMin * 60 * 1000);
     return {
       summary: title,
       start: { dateTime: startDate.toISOString(), timeZone: 'Europe/Amsterdam' },
