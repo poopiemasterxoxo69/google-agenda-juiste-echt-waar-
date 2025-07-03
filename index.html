@@ -138,44 +138,45 @@ function parseTextToEvent(text) {
 })();
 
   const tijd = (() => {
-    const hhmm = text.match(/(\d{1,2})[:;\s](\d{2})/);
-    let hint = '';
-    if (text.includes("ochtend")) hint = "ochtend";
-    if (text.includes("middag")) hint = "middag";
-    if (text.includes("avond")) hint = "avond";
-    if (text.includes("nacht")) hint = "nacht";
+  const hhmm = text.match(/(\d{1,2})[:;\s](\d{2})/);
+  let hint = '';
+  if (text.includes("ochtend")) hint = "ochtend";
+  if (text.includes("middag")) hint = "middag";
+  if (text.includes("avond")) hint = "avond";
+  if (text.includes("nacht")) hint = "nacht";
 
-    if (hhmm) {
-      let h = parseInt(hhmm[1]), m = parseInt(hhmm[2]);
-      if (!hint && h < 8) h += 12;
-      if (hint === "ochtend" && h >= 12) h -= 12;
-      if (hint === "avond" && h < 12) h += 12;
-      return {h, m};
+  if (hhmm) {
+    let h = parseInt(hhmm[1]), m = parseInt(hhmm[2]);
+    return {h, m};
+  }
+
+  const tekstTijd = text.match(/\b(half|kwart over|kwart voor)?\s*(\d{1,2})\b/);
+  if (tekstTijd) {
+    let uur = parseInt(tekstTijd[2]);
+    let min = 0;
+    const mod = tekstTijd[1] ? tekstTijd[1].toLowerCase() : '';
+
+    if (mod === 'half') {
+      uur = (uur - 1 + 24) % 24;
+      min = 30;
+    } else if (mod === 'kwart over') {
+      min = 15;
+    } else if (mod === 'kwart voor') {
+      uur = (uur - 1 + 24) % 24;
+      min = 45;
     }
 
-    const tekstTijd = text.match(/\b(half|kwart over|kwart voor)?\s*(\d{1,2})\b/);
-    if (tekstTijd) {
-      let uur = parseInt(tekstTijd[2]);
-      let min = 0;
-      const mod = tekstTijd[1] ? tekstTijd[1].toLowerCase() : '';
-      if (mod === 'half') {
-        uur = (uur - 1 + 24) % 24;
-        min = 30;
-      } else if (mod === 'kwart over') {
-        min = 15;
-      } else if (mod === 'kwart voor') {
-        uur = (uur - 1 + 24) % 24;
-        min = 45;
-      }
+    // Dagdeel hints toepassen
+    if (hint === "ochtend" && uur >= 12) uur -= 12;
+    if (hint === "middag" && uur < 12) uur += 12;
+    if (hint === "avond" && uur < 12) uur += 12;
+    if (hint === "nacht") uur = (uur + 24) % 24;
 
-      if (!hint && uur < 8) uur += 12;
-      if (hint === "ochtend" && uur >= 12) uur -= 12;
-      if (hint === "avond" && uur < 12) uur += 12;
-      return {h: uur, m: min};
-    }
+    return {h: uur, m: min};
+  }
 
-    return null;
-  })();
+  return null;
+})();
 
   if (!heleDag && !tijd) {
     alert("Kon geen geldige tijd vinden. Gebruik hh:mm of tekst als 'half 4' of 'half 4 ochtend'");
