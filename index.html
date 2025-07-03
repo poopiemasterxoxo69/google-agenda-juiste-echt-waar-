@@ -106,7 +106,6 @@ function detecteerTijdModifier(tekst) {
   tekst = tekst.toLowerCase();
   const opties = ['half', 'kwart over', 'kwart voor'];
 
-  // Eerst exacte match
   for (const optie of opties) {
     if (tekst.includes(optie)) {
       console.log(`exact gevonden modifier: ${optie}`);
@@ -114,7 +113,6 @@ function detecteerTijdModifier(tekst) {
     }
   }
 
-  // Anders fuzzy per woord
   let beste = null, besteAfstand = Infinity;
   const woorden = tekst.split(/\s+/);
 
@@ -156,11 +154,8 @@ function parseTextToEvent(text) {
       const day = parseInt(dateMatch[1]);
       const maandTekst = dateMatch[2].toLowerCase();
 
-      let maandIndex = null;
-
-      if (monthMap.hasOwnProperty(maandTekst)) {
-        maandIndex = monthMap[maandTekst];
-      } else {
+      let maandIndex = monthMap[maandTekst];
+      if (maandIndex === undefined) {
         let beste = null, besteAfstand = Infinity;
         for (const m of Object.keys(monthMap)) {
           const afstand = levenshtein(m, maandTekst);
@@ -169,17 +164,13 @@ function parseTextToEvent(text) {
             beste = m;
           }
         }
-        if (beste && besteAfstand <= 2) {
-          maandIndex = monthMap[beste];
-        }
+        if (beste && besteAfstand <= 2) maandIndex = monthMap[beste];
       }
 
-      if (maandIndex !== null) {
+      if (maandIndex !== undefined) {
         let jaar = today.getFullYear();
         const kandidaat = new Date(jaar, maandIndex, day);
-        if (kandidaat < today) {
-          kandidaat.setFullYear(jaar + 1);
-        }
+        if (kandidaat < today) kandidaat.setFullYear(jaar + 1);
         return kandidaat;
       }
     }
@@ -264,43 +255,6 @@ function parseTextToEvent(text) {
   }
 }
 
-function formatTimeNL(isoString) {
-  const d = new Date(isoString);
-  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-}
-
-async function checkConflicts(event) {
-  const start = event.start.dateTime || (event.start.date + "T00:00:00Z");
-  const end = event.end.dateTime || (event.end.date + "T23:59:59Z");
-  const res = await gapi.client.calendar.events.list({
-    calendarId: 'primary',
-    timeMin: start,
-    timeMax: end,
-    singleEvents: true,
-    orderBy: 'startTime'
-  });
-
-  const newStart = new Date(start).getTime();
-  const newEnd = new Date(end).getTime();
-
-  const conflicts = [];
-
-  for (const item of res.result.items) {
-    const itemStart = new Date(item.start.dateTime || item.start.date + "T00:00:00Z").getTime();
-    const itemEnd = new Date(item.end.dateTime || item.end.date + "T23:59:59Z").getTime();
-
-    if (
-      (newStart < itemEnd && newEnd > itemStart) ||
-      Math.abs(newStart - itemEnd) < 30*60*1000 ||
-      Math.abs(itemStart - newEnd) < 30*60*1000
-    ) {
-      conflicts.push(item);
-    }
-  }
-
-  return conflicts;
-}
-
 async function addEvent() {
   if (!accessToken) {
     alert("Log eerst in met Google.");
@@ -322,18 +276,6 @@ async function addEvent() {
 
   event.colorId = gekozen;
 
-  const conflicts = await checkConflicts(event);
-
-  if (conflicts.length > 0) {
-    let msg = `Er is al iets gepland rond dat tijdstip:\n\n`;
-    for (const c of conflicts) {
-      const tijd = c.start.dateTime || c.start.date + "T00:00:00Z";
-      msg += `- ${c.summary} (${formatTimeNL(tijd)})\n`;
-    }
-    msg += `\nToch toevoegen?`;
-    if (!confirm(msg)) return;
-  }
-
   try {
     await gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
     alert("Event toegevoegd!");
@@ -342,8 +284,6 @@ async function addEvent() {
     alert("Fout bij toevoegen van event.");
   }
 }
-</script>
-
 </script>
 </body>
 </html>
