@@ -143,13 +143,6 @@ function parseTextToEvent(text) {
   }
 }
 
-function formatTimeNL(isoString) {
-  const d = new Date(isoString);
-  const h = d.getHours().toString().padStart(2, '0');
-  const m = d.getMinutes().toString().padStart(2, '0');
-  return `${h}:${m}`;
-}
-
 async function checkConflicts(event) {
   const start = event.start.dateTime || (event.start.date + "T00:00:00Z");
   const end = event.end.dateTime || (event.end.date + "T23:59:59Z");
@@ -171,9 +164,9 @@ async function checkConflicts(event) {
     const itemEnd = new Date(item.end.dateTime || item.end.date + "T23:59:59Z").getTime();
 
     if (
-      (newStart < itemEnd && newEnd > itemStart) ||
-      Math.abs(newStart - itemEnd) < 30*60*1000 ||
-      Math.abs(itemStart - newEnd) < 30*60*1000
+      (newStart < itemEnd && newEnd > itemStart) || // overlap
+      Math.abs(newStart - itemEnd) < 30*60*1000 || // minder dan 30 min na
+      Math.abs(itemStart - newEnd) < 30*60*1000    // minder dan 30 min voor
     ) {
       conflicts.push(item);
     }
@@ -209,10 +202,10 @@ async function addEvent() {
   const conflicts = await checkConflicts(event);
 
   if (conflicts.length > 0) {
-    let msg = `Er is al iets gepland rond dat tijdstip:\n\n`;
+    let msg = `Er is al iets gepland dat overlapt:\n\n`;
     for (const c of conflicts) {
-      const tijd = c.start.dateTime || c.start.date + "T00:00:00Z";
-      msg += `- ${c.summary} (${formatTimeNL(tijd)})\n`;
+      const tijd = c.start.dateTime || c.start.date;
+      msg += `- ${c.summary} (${tijd})\n`;
     }
     msg += `\nToch toevoegen?`;
     if (!confirm(msg)) return;
