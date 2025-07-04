@@ -89,10 +89,11 @@
 
   <script>
 document.getElementById("parseBtn").addEventListener("click", () => {
-  const input = document.getElementById("eventInput").value.trim();
+  const inputRaw = document.getElementById("eventInput").value.trim();
   const color = document.getElementById("color").value;
   const duration = document.getElementById("duration").value;
 
+  const input = preprocessInput(inputRaw);
   const events = parseMultipleEvents(input);
   const resultDiv = document.getElementById("result");
   resultDiv.innerHTML = "";
@@ -119,17 +120,60 @@ document.getElementById("parseBtn").addEventListener("click", () => {
   });
 });
 
+function preprocessInput(text) {
+  // Vervang ' en ' tussen dagen/tijden door ', ' om te splitsen
+  const dagen = ["maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag","zondag"];
+  const tijdRegex = /\d{1,2}[:\.]\d{2}/;
+
+  return text.replace(/\s+en\s+/g, (match, offset, str) => {
+    const before = str.slice(0, offset).trim().split(/\s+/).pop().toLowerCase();
+    const after = str.slice(offset + match.length).trim().split(/\s+/)[0].toLowerCase();
+
+    if ((dagen.includes(before) || tijdRegex.test(before)) && (dagen.includes(after) || tijdRegex.test(after))) {
+      return ", ";
+    }
+    return match;
+  });
+}
+
+function parseMultipleEvents(inputText) {
+  // Split op komma, puntkomma, nieuwe lijn én ' en ' (met spaties aan beide kanten)
+  const chunks = inputText
+    .split(/[,;\n]|(?<=\S)\s+en\s+(?=\S)/)
+    .map(c => c.trim())
+    .filter(Boolean);
+
+  let mainSubject = "";
+  const events = [];
+
+  chunks.forEach(chunk => {
+    const event = parseTextToEvent(chunk);
+    if (event.naam.toLowerCase() !== "onbekend") {
+      mainSubject = event.naam;
+    } else if (mainSubject) {
+      event.naam = mainSubject;
+    }
+    events.push(event);
+  });
+
+  return events;
+}
+
+
+
+
 function parseMultipleEvents(inputText) {
   const chunks = inputText.split(/[,;\n]/).map(c => c.trim()).filter(Boolean);
+
   let mainSubject = "";
   const events = [];
 
   for (let chunk of chunks) {
     const event = parseTextToEvent(chunk);
     if (event.naam.toLowerCase() !== "onbekend") {
-      mainSubject = event.naam;
+      mainSubject = event.naam;  // update main subject
     } else if (mainSubject) {
-      event.naam = mainSubject;
+      event.naam = mainSubject; // gebruik laatst bekende naam
     }
     events.push(event);
   }
@@ -151,6 +195,7 @@ function parseTextToEvent(text) {
   ];
   const maandRegexParts = maanden.flat().join("|");
 
+  // Datum herkennen d/m/j of d maand
   let m = lower.match(/(\d{1,2})[\/\-\s](\d{1,2})(?:[\/\-\s](\d{2,4}))?/);
   let m2 = lower.match(new RegExp(`(\\d{1,2})\\s*(${maandRegexParts})`));
 
@@ -172,6 +217,7 @@ function parseTextToEvent(text) {
     datum = new Date(vandaag.getFullYear(), mo, d);
     lower = lower.replace(m2[0], "");
   } else {
+    // Datum op basis van dag van week
     const dagen = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
     for (let i = 0; i < dagen.length; i++) {
       if (lower.includes(dagen[i])) {
@@ -189,58 +235,78 @@ function parseTextToEvent(text) {
   datumStr = `${datum.getDate()}-${datum.getMonth() + 1}-${datum.getFullYear()}`;
   let tijd = "Hele dag";
 
+  // Tijd detectie
+  // 1) Exacte tijd zoals 14:00 of 14.00
   const exactTimeMatch = lower.match(/(\d{1,2})[:\.](\d{2})/);
   if (exactTimeMatch) {
     tijd = exactTimeMatch[1].padStart(2, '0') + ":" + exactTimeMatch[2];
     lower = lower.replace(exactTimeMatch[0], "");
   } else {
-    let complexMatch = lower.match(/(\d{1,2})\s*over\s*half\s*(\d{1,2})/);
+    // 2) NIEUWE: "X voor half Y" (bv. 5 voor half 9 = 08:25)
+    let complexMatch = lower.match(/(\d{1,2})\s*voor\s*half\s*(\d{1,2})/);
     if (complexMatch) {
-      const over = parseInt(complexMatch[1]);
+      const voor = parseInt(complexMatch[1]);
       const uur = parseInt(complexMatch[2]) - 1;
-      const min = 30 + over;
+      const min = 30 - voor;
       tijd = `${uur.toString().padStart(2,'0')}:${min.toString().padStart(2,'0')}`;
       lower = lower.replace(complexMatch[0], "");
     } else {
-      complexMatch = lower.match(/(\d{1,2})\s*over\s*(\d{1,2})/);
+      // 3) "X over half Y" (bv 5 over half 9 = 08:35)
+      complexMatch = lower.match(/(\d{1,2})\s*over\s*half\s*(\d{1,2})/);
       if (complexMatch) {
-        const min = parseInt(complexMatch[1]);
-        const uur = parseInt(complexMatch[2]);
+        const over = parseInt(complexMatch[1]);
+        const uur = parseInt(complexMatch[2]) - 1;
+        const min = 30 + over;
         tijd = `${uur.toString().padStart(2,'0')}:${min.toString().padStart(2,'0')}`;
         lower = lower.replace(complexMatch[0], "");
-      } else if (lower.includes("half")) {
-        const uurMatch = lower.match(/half\s*(\d{1,2})/);
-        if (uurMatch) {
-          const h = parseInt(uurMatch[1]) - 1;
-          tijd = h.toString().padStart(2,'0') + ":30";
-          lower = lower.replace(uurMatch[0], "");
-        }
-      } else if (lower.includes("kwart over")) {
-        const uurMatch = lower.match(/kwart over\s*(\d{1,2})/);
-        if (uurMatch) {
-          tijd = uurMatch[1].padStart(2,'0') + ":15";
-          lower = lower.replace(uurMatch[0], "");
-        }
-      } else if (lower.includes("kwart voor")) {
-        const uurMatch = lower.match(/kwart voor\s*(\d{1,2})/);
-        if (uurMatch) {
-          const h = parseInt(uurMatch[1])-1;
-          tijd = h.toString().padStart(2,'0') + ":45";
-          lower = lower.replace(uurMatch[0], "");
+      } else {
+        // 4) "X over Y" (bv 5 over 9 = 09:05)
+        complexMatch = lower.match(/(\d{1,2})\s*over\s*(\d{1,2})/);
+        if (complexMatch) {
+          const min = parseInt(complexMatch[1]);
+          const uur = parseInt(complexMatch[2]);
+          tijd = `${uur.toString().padStart(2,'0')}:${min.toString().padStart(2,'0')}`;
+          lower = lower.replace(complexMatch[0], "");
+        } else if (lower.includes("half")) {
+          // 5) "half Y" (bv half 9 = 08:30)
+          const uurMatch = lower.match(/half\s*(\d{1,2})/);
+          if (uurMatch) {
+            const h = parseInt(uurMatch[1]) - 1;
+            tijd = h.toString().padStart(2,'0') + ":30";
+            lower = lower.replace(uurMatch[0], "");
+          }
+        } else if (lower.includes("kwart over")) {
+          // 6) "kwart over Y" (bv kwart over 9 = 09:15)
+          const uurMatch = lower.match(/kwart over\s*(\d{1,2})/);
+          if (uurMatch) {
+            tijd = uurMatch[1].padStart(2,'0') + ":15";
+            lower = lower.replace(uurMatch[0], "");
+          }
+        } else if (lower.includes("kwart voor")) {
+          // 7) "kwart voor Y" (bv kwart voor 9 = 08:45)
+          const uurMatch = lower.match(/kwart voor\s*(\d{1,2})/);
+          if (uurMatch) {
+            const h = parseInt(uurMatch[1])-1;
+            tijd = h.toString().padStart(2,'0') + ":45";
+            lower = lower.replace(uurMatch[0], "");
+          }
         }
       }
     }
   }
 
+  // Woorden die niet in de naam moeten komen
   const stopWords = [
     "om", "op", "de", "het", "half", "kwart", "over", "voor",
     "uur", "heledag", "hele", "dag", "in", "te", "tot",
-    "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"
+    "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag",
+    "en"
   ];
 
   const maandWoorden = maanden.flat();
   const stopRegexWords = [...stopWords, ...maandWoorden].join("|");
 
+  // Filter stopwoorden, cijfers en tijden uit naam
   let naam = lower
     .replace(new RegExp(`\\b(${stopRegexWords})\\b`, "g"), "")
     .replace(/\b([1-9]|[12][0-9]|3[01])\b/g, "")
@@ -252,6 +318,8 @@ function parseTextToEvent(text) {
 
   return { naam, datum: datumStr, tijd };
 }
+
+
 </script>
 
 </body>
