@@ -5,8 +5,10 @@ export default async function handler(req, res) {
   const { tekst } = req.body;
 
   const prompt = `
-Je bent een agenda-assistent. Zet deze tekst om in JSON met:
+Je bent een agenda-assistent. Zet de onderstaande tekst om in geldige en zuivere JSON, en geef verder *niets anders terug dan die JSON*. 
+De JSON moet deze velden bevatten:
 {"titel":"…","datum":"YYYY-MM-DD","starttijd":"HH:MM","eindtijd":"HH:MM (optioneel)"}
+
 Tekst: "${tekst}"
 `;
 
@@ -31,12 +33,19 @@ Tekst: "${tekst}"
     return res.status(500).json({ error: "Ongeldige response van Groq", response: j });
   }
 
+  // Strip eventuele ```json … ``` blokken
+  const content = j.choices[0].message.content.trim()
+    .replace(/^```json/i, '')
+    .replace(/^```/, '')
+    .replace(/```$/, '')
+    .trim();
+
   let ai;
   try {
-    ai = JSON.parse(j.choices[0].message.content);
+    ai = JSON.parse(content);
   } catch (e) {
-    console.error("Kan response niet parsen als JSON:", j.choices[0].message.content);
-    return res.status(500).json({ error: "Kan response niet parsen als JSON", response: j.choices[0].message.content });
+    console.error("Kan response niet parsen als JSON:", content);
+    return res.status(500).json({ error: "Kan response niet parsen als JSON", response: content });
   }
 
   return res.status(200).json(ai);
