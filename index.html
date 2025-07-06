@@ -1,326 +1,280 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Agenda Parser</title>
+  <meta charset="UTF-8">
+  <title>Evenementen Parser - Parse & Log (Verbeterd)</title>
   <style>
-    body {
-      font-family: sans-serif;
-      background-color: #f5f5f5;
-      max-width: 700px;
-      margin: auto;
-      padding: 20px;
-    }
-
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    input, select, button {
-      width: 100%;
-      font-size: 16px;
-      padding: 12px;
-      margin-top: 10px;
-      margin-bottom: 15px;
-      box-sizing: border-box;
-    }
-
-    label {
-      font-weight: bold;
-      display: block;
-      margin-top: 10px;
-    }
-
-    button {
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #0056b3;
-    }
-
-    #result {
-      background: white;
-      padding: 15px;
-      border-radius: 6px;
-      margin-top: 20px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
+    body { font-family: Arial, sans-serif; }
+    #result table, .log-entry table { border-collapse: collapse; margin-top: 10px; }
+    #result th, #result td, .log-entry th, .log-entry td { border: 1px solid #ccc; padding: 8px 12px; }
+    #result th, .log-entry th { background: #f0f0f0; }
+    .log-entry { margin-top: 30px; border-top: 2px solid #888; padding-top: 10px; }
+    .log-label { font-weight: bold; color: #444; margin-bottom: 5px; }
   </style>
 </head>
 <body>
-
-  <h2>Voer een gebeurtenis in:</h2>
-
-  <input type="text" id="eventInput" placeholder="bijv: kapper 4 juli om 10:30" />
-
-  <label for="color">Kies een kleur:</label>
-  <select id="color">
-    <option value="random">🎲 Willekeurig</option>
-    <option value="11">❤️ Rood</option>
-    <option value="6">🟧 Oranje</option>
-    <option value="5">💛 Geel</option>
-    <option value="10">💚 Donkergroen</option>
-    <option value="2">💚 Lichtgroen</option>
-    <option value="9">💙 Blauw</option>
-    <option value="7">🫐 Bosbes</option>
-    <option value="3">💜 Lavendel</option>
-    <option value="4">🍇 Paars</option>
-    <option value="1">💗 Roze</option>
-    <option value="8">⚫ Grijs</option>
-  </select>
-
-  <label for="duration">Kies duur:</label>
-  <select id="duration">
-    <option value="1 uur">1 uur</option>
-    <option value="2 uur">2 uur</option>
-    <option value="3 uur">3 uur</option>
-  </select>
-
-  <button id="parseBtn">➕ Parse gebeurtenis</button>
-
+  <h2>Evenementen invoer</h2>
+  <textarea id="eventInput" rows="4" cols="80">zondag ochtend werk 12:00</textarea><br>
+  <label>Kleur: <input type="text" id="color" value="random"></label>
+  <label>Duur: <input type="text" id="duration" value="1 uur"></label>
+  <button id="parseAndLogBtn">Parse &amp; Log</button>
   <div id="result"></div>
-
+  <h3>Log</h3>
+  <div id="log"></div>
   <script>
-document.getElementById("parseBtn").addEventListener("click", () => {
-  const inputRaw = document.getElementById("eventInput").value.trim();
-  const color = document.getElementById("color").value;
-  const duration = document.getElementById("duration").value;
+    // --- Configuratie ---
+    const maandnamen = ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"];
+    const dagen = ["maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag","zondag"];
+    const maandSet = new Set(maandnamen);
 
-  const input = preprocessInput(inputRaw);
-  const events = parseMultipleEvents(input);
-  const resultDiv = document.getElementById("result");
-  resultDiv.innerHTML = "";
+    document.getElementById("parseAndLogBtn").addEventListener("click", () => {
+      parseAndLog();
+    });
 
-  events.forEach((event, i) => {
-    event.kleur = color;
-    event.duur = duration;
-
-    resultDiv.innerHTML += `
-      <div style="margin-bottom:10px;padding:10px;border-left:5px solid #007bff;background:#fff">
-        <strong>${event.naam}</strong><br>
-        📅 ${event.datum}<br>
-        ⏰ ${event.tijd}<br>
-        ⏳ ${event.duur}<br>
-        🎨 Kleur: ${event.kleur}
-      </div>
-    `;
-
-    console.log(`📝 [${i + 1}] Naam: ${event.naam}`);
-    console.log(`📅 Datum: ${event.datum}`);
-    console.log(`⏰ Tijd: ${event.tijd}`);
-    console.log(`⏳ Duur: ${event.duur}`);
-    console.log(`🎨 Kleur: ${event.kleur}`);
-  });
-});
-
-function preprocessInput(text) {
-  // Vervang ' en ' tussen dagen/tijden door ', ' om te splitsen
-  const dagen = ["maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag","zondag"];
-  const tijdRegex = /\d{1,2}[:\.]\d{2}/;
-
-  return text.replace(/\s+en\s+/g, (match, offset, str) => {
-    const before = str.slice(0, offset).trim().split(/\s+/).pop().toLowerCase();
-    const after = str.slice(offset + match.length).trim().split(/\s+/)[0].toLowerCase();
-
-    if ((dagen.includes(before) || tijdRegex.test(before)) && (dagen.includes(after) || tijdRegex.test(after))) {
-      return ", ";
+    function parseAndLog() {
+      const inputRaw = document.getElementById("eventInput").value.trim();
+      const color = document.getElementById("color").value;
+      const duration = document.getElementById("duration").value;
+      const events = parseEvents(inputRaw, color, duration);
+      showEvents(events);
+      logResult(inputRaw, events);
     }
-    return match;
-  });
-}
 
-function parseMultipleEvents(inputText) {
-  // Split op komma, puntkomma, nieuwe lijn én ' en ' (met spaties aan beide kanten)
-  const chunks = inputText
-    .split(/[,;\n]|(?<=\S)\s+en\s+(?=\S)/)
-    .map(c => c.trim())
-    .filter(Boolean);
-
-  let mainSubject = "";
-  const events = [];
-
-  chunks.forEach(chunk => {
-    const event = parseTextToEvent(chunk);
-    if (event.naam.toLowerCase() !== "onbekend") {
-      mainSubject = event.naam;
-    } else if (mainSubject) {
-      event.naam = mainSubject;
-    }
-    events.push(event);
-  });
-
-  return events;
-}
-
-
-
-
-function parseMultipleEvents(inputText) {
-  const chunks = inputText.split(/[,;\n]/).map(c => c.trim()).filter(Boolean);
-
-  let mainSubject = "";
-  const events = [];
-
-  for (let chunk of chunks) {
-    const event = parseTextToEvent(chunk);
-    if (event.naam.toLowerCase() !== "onbekend") {
-      mainSubject = event.naam;  // update main subject
-    } else if (mainSubject) {
-      event.naam = mainSubject; // gebruik laatst bekende naam
-    }
-    events.push(event);
-  }
-
-  return events;
-}
-
-function parseTextToEvent(text) {
-  const origText = text.trim();
-  let lower = origText.toLowerCase();
-  const vandaag = new Date();
-  let datum = vandaag;
-  let datumStr = "";
-
-  const maanden = [
-    ['januari','jan'], ['februari','feb'], ['maart','mrt'], ['april','apr'],
-    ['mei'], ['juni','jun'], ['juli','jul'], ['augustus','aug'],
-    ['september','sep','sept'], ['oktober','okt'], ['november','nov'], ['december','dec']
-  ];
-  const maandRegexParts = maanden.flat().join("|");
-
-  // Datum herkennen d/m/j of d maand
-  let m = lower.match(/(\d{1,2})[\/\-\s](\d{1,2})(?:[\/\-\s](\d{2,4}))?/);
-  let m2 = lower.match(new RegExp(`(\\d{1,2})\\s*(${maandRegexParts})`));
-
-  if (m) {
-    const d = parseInt(m[1]);
-    const mo = parseInt(m[2]) - 1;
-    const y = m[3] ? parseInt(m[3]) : vandaag.getFullYear();
-    datum = new Date(y, mo, d);
-    lower = lower.replace(m[0], "");
-  } else if (m2) {
-    const d = parseInt(m2[1]);
-    let mo = 0;
-    for(let i=0; i<maanden.length; i++) {
-      if (maanden[i].includes(m2[2])) {
-        mo = i;
-        break;
+    function showEvents(events) {
+      const resultDiv = document.getElementById("result");
+      if (events.length === 0) {
+        resultDiv.innerHTML = "<p>Geen evenementen gevonden.</p>";
+        return;
       }
+      resultDiv.innerHTML = eventTableHtml(events);
     }
-    datum = new Date(vandaag.getFullYear(), mo, d);
-    lower = lower.replace(m2[0], "");
-  } else {
-    // Datum op basis van dag van week
-    const dagen = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
-    for (let i = 0; i < dagen.length; i++) {
-      if (lower.includes(dagen[i])) {
-        const vandaagIndex = vandaag.getDay();
-        const diff = (i - vandaagIndex + 7) % 7 || 7;
-        const nieuweDatum = new Date(vandaag);
-        nieuweDatum.setDate(vandaag.getDate() + diff);
-        datum = nieuweDatum;
-        lower = lower.replace(dagen[i], "");
-        break;
+
+    function logResult(inputRaw, events) {
+      const logDiv = document.getElementById("log");
+      const entry = document.createElement("div");
+      entry.classList.add("log-entry");
+      entry.innerHTML = `
+        <div class="log-label">Input:</div>
+        <div style="margin-bottom:8px;white-space:pre-line;">${escapeHtml(inputRaw)}</div>
+        <div class="log-label">Resultaat:</div>
+        ${events.length === 0 ? "<em>Geen evenementen gevonden.</em>" : eventTableHtml(events)}
+      `;
+      logDiv.appendChild(entry);
+    }
+
+    function eventTableHtml(events) {
+      let html = '<table><tr><th>Titel</th><th>Datum</th><th>Tijd</th><th>Duur</th><th>Kleur</th></tr>';
+      for (const ev of events) {
+        html += `<tr>
+          <td>${ev.titel}</td>
+          <td>${ev.datum}</td>
+          <td>${ev.tijd}</td>
+          <td>${ev.duur}</td>
+          <td>${ev.kleur}</td>
+        </tr>`;
       }
+      html += '</table>';
+      return html;
     }
-  }
 
-  datumStr = `${datum.getDate()}-${datum.getMonth() + 1}-${datum.getFullYear()}`;
-  let tijd = "Hele dag";
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, function(m) {
+        return ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[m];
+      });
+    }
 
-  // Tijd detectie
-  // 1) Exacte tijd zoals 14:00 of 14.00
-  const exactTimeMatch = lower.match(/(\d{1,2})[:\.](\d{2})/);
-  if (exactTimeMatch) {
-    tijd = exactTimeMatch[1].padStart(2, '0') + ":" + exactTimeMatch[2];
-    lower = lower.replace(exactTimeMatch[0], "");
-  } else {
-    // 2) NIEUWE: "X voor half Y" (bv. 5 voor half 9 = 08:25)
-    let complexMatch = lower.match(/(\d{1,2})\s*voor\s*half\s*(\d{1,2})/);
-    if (complexMatch) {
-      const voor = parseInt(complexMatch[1]);
-      const uur = parseInt(complexMatch[2]) - 1;
-      const min = 30 - voor;
-      tijd = `${uur.toString().padStart(2,'0')}:${min.toString().padStart(2,'0')}`;
-      lower = lower.replace(complexMatch[0], "");
-    } else {
-      // 3) "X over half Y" (bv 5 over half 9 = 08:35)
-      complexMatch = lower.match(/(\d{1,2})\s*over\s*half\s*(\d{1,2})/);
-      if (complexMatch) {
-        const over = parseInt(complexMatch[1]);
-        const uur = parseInt(complexMatch[2]) - 1;
-        const min = 30 + over;
-        tijd = `${uur.toString().padStart(2,'0')}:${min.toString().padStart(2,'0')}`;
-        lower = lower.replace(complexMatch[0], "");
-      } else {
-        // 4) "X over Y" (bv 5 over 9 = 09:05)
-        complexMatch = lower.match(/(\d{1,2})\s*over\s*(\d{1,2})/);
-        if (complexMatch) {
-          const min = parseInt(complexMatch[1]);
-          const uur = parseInt(complexMatch[2]);
-          tijd = `${uur.toString().padStart(2,'0')}:${min.toString().padStart(2,'0')}`;
-          lower = lower.replace(complexMatch[0], "");
-        } else if (lower.includes("half")) {
-          // 5) "half Y" (bv half 9 = 08:30)
-          const uurMatch = lower.match(/half\s*(\d{1,2})/);
-          if (uurMatch) {
-            const h = parseInt(uurMatch[1]) - 1;
-            tijd = h.toString().padStart(2,'0') + ":30";
-            lower = lower.replace(uurMatch[0], "");
+    // --- Verbeterde parser ---
+    function parseEvents(input, kleur, duur) {
+      let clauses = input.split(/,|\n/).map(c => c.trim()).filter(Boolean);
+      let events = [];
+      for (let clause of clauses) {
+        let {dag, dagIndex, dagPos} = matchDay(clause);
+        let explicitDate = matchExplicitDate(clause);
+        let relDate = matchRelativeDate(clause);
+        let dateObj = explicitDate ? explicitDate.date : (relDate ? relDate.date : null);
+        let dateDesc = explicitDate ? explicitDate.label : (relDate ? relDate.label : null);
+
+        // Alle tijden in de zin, gesorteerd op positie
+        let tijden = matchAllTimes(clause);
+
+        // Als er tijden zijn, splits zin in blokken per tijd, koppel aan bijbehorende titel
+        if (tijden.length > 0) {
+          for (let i=0; i<tijden.length; ++i) {
+            let tijd = tijden[i].tijd;
+            let tijdPos = tijden[i].pos;
+            let tijdLen = tijden[i].len;
+            // Titel is: alles tussen deze tijd en de volgende, split op "en", neem per tijd één titel (de eerste niet-lege)
+            let after = clause.substring(tijdPos + tijdLen, i+1<tijden.length?tijden[i+1].pos:clause.length);
+            let titels = after.split(/\ben\b/i).map(cleanTitle).filter(Boolean);
+            let titel = titels[0] || cleanTitle(clause.substring(0, tijdPos)); // fallback: alles vóór tijd
+            if (!titel) titel = "Evenement";
+            let datum = getDatum(dag, dagIndex, dateObj, dateDesc);
+            events.push({ titel, datum, tijd, duur, kleur });
           }
-        } else if (lower.includes("kwart over")) {
-          // 6) "kwart over Y" (bv kwart over 9 = 09:15)
-          const uurMatch = lower.match(/kwart over\s*(\d{1,2})/);
-          if (uurMatch) {
-            tijd = uurMatch[1].padStart(2,'0') + ":15";
-            lower = lower.replace(uurMatch[0], "");
-          }
-        } else if (lower.includes("kwart voor")) {
-          // 7) "kwart voor Y" (bv kwart voor 9 = 08:45)
-          const uurMatch = lower.match(/kwart voor\s*(\d{1,2})/);
-          if (uurMatch) {
-            const h = parseInt(uurMatch[1])-1;
-            tijd = h.toString().padStart(2,'0') + ":45";
-            lower = lower.replace(uurMatch[0], "");
-          }
+        } else {
+          // Geen tijd, zoek contexttijd
+          let tijd = matchContextTime(clause) || "Hele dag";
+          let titel = cleanTitle(clause.replace(/^\b(\w+)\b/, "")); // verwijder dagnaam aan begin
+          if (!titel) titel = "Evenement";
+          let datum = getDatum(dag, dagIndex, dateObj, dateDesc);
+          events.push({ titel, datum, tijd, duur, kleur });
         }
       }
+      return events;
     }
-  }
 
-  // Woorden die niet in de naam moeten komen
-  const stopWords = [
-    "om", "op", "de", "het", "half", "kwart", "over", "voor",
-    "uur", "heledag", "hele", "dag", "in", "te", "tot",
-    "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag",
-    "en"
-  ];
+    function cleanTitle(titel) {
+      return titel
+        .replace(/^\s*(om|tot|en|daarna)?\s*/gi, "")
+        .replace(/[\.,;:]+$/, "")
+        .replace(/^\d{1,2}[:\.]\d{2}$/, "")
+        .replace(/^\d{1,2}(\s*u|uur)?$/, "")
+        .replace(/\bochtend\b|\bmiddag\b|\bavond\b|\bmiddernacht\b/gi, "")
+        .trim();
+    }
 
-  const maandWoorden = maanden.flat();
-  const stopRegexWords = [...stopWords, ...maandWoorden].join("|");
+    function matchDay(str) {
+      for (let i=0; i<dagen.length; ++i) {
+        const d = dagen[i];
+        const r = new RegExp(`\\b${d}\\b`, 'i');
+        const m = r.exec(str);
+        if (m) return { dag: d, dagIndex: i, dagPos: m.index };
+      }
+      return { dag: null, dagIndex: -1, dagPos: -1 };
+    }
 
-  // Filter stopwoorden, cijfers en tijden uit naam
-  let naam = lower
-    .replace(new RegExp(`\\b(${stopRegexWords})\\b`, "g"), "")
-    .replace(/\b([1-9]|[12][0-9]|3[01])\b/g, "")
-    .replace(/\b\d{1,2}[:\.]\d{2}\b/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+    function matchExplicitDate(str) {
+      let m = str.match(/\b(\d{1,2})\s*([a-z]+)(?:\s+(\d{4}))?\b/i);
+      if (m && maandSet.has(m[2].toLowerCase())) {
+        let dag = parseInt(m[1]);
+        let maand = maandnamen.indexOf(m[2].toLowerCase());
+        let jaar = m[3] ? parseInt(m[3]) : (new Date()).getFullYear();
+        let dt = new Date(jaar, maand, dag);
+        return { date: dt, label: `${dag} ${maandnamen[maand]} ${jaar}` };
+      }
+      m = str.match(/\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b/);
+      if (m) {
+        let dag = parseInt(m[1]);
+        let maand = parseInt(m[2]) - 1;
+        let jaar = parseInt(m[3]); if (jaar < 100) jaar += 2000;
+        let dt = new Date(jaar, maand, dag);
+        return { date: dt, label: `${dag} ${maandnamen[maand]} ${jaar}` };
+      }
+      return null;
+    }
 
-  if (!naam) naam = "Onbekend";
+    function matchRelativeDate(str) {
+      let nu = new Date();
+      if (str.match(/\bovermorgen\b/i)) {
+        let dt = new Date(nu); dt.setDate(dt.getDate()+2);
+        return { date: dt, label: `${dt.getDate()} ${maandnamen[dt.getMonth()]} ${dt.getFullYear()}` };
+      }
+      if (str.match(/\bmorgen\b/i)) {
+        let dt = new Date(nu); dt.setDate(dt.getDate()+1);
+        return { date: dt, label: `${dt.getDate()} ${maandnamen[dt.getMonth()]} ${dt.getFullYear()}` };
+      }
+      if (str.match(/\bvandaag\b/i)) {
+        let dt = new Date(nu);
+        return { date: dt, label: `${dt.getDate()} ${maandnamen[dt.getMonth()]} ${dt.getFullYear()}` };
+      }
+      if (str.match(/\bgisteren\b/i)) {
+        let dt = new Date(nu); dt.setDate(dt.getDate()-1);
+        return { date: dt, label: `${dt.getDate()} ${maandnamen[dt.getMonth()]} ${dt.getFullYear()}` };
+      }
+      let weken = str.match(/\bover\s+(\d+)\s+weken?\b/i);
+      if (weken) {
+        let n = parseInt(weken[1]);
+        let dt = new Date(nu); dt.setDate(dt.getDate()+n*7);
+        return { date: dt, label: `${dt.getDate()} ${maandnamen[dt.getMonth()]} ${dt.getFullYear()}` };
+      }
+      let dagenMatch = str.match(/\bover\s+(\d+)\s+dagen?\b/i);
+      if (dagenMatch) {
+        let n = parseInt(dagenMatch[1]);
+        let dt = new Date(nu); dt.setDate(dt.getDate()+n);
+        return { date: dt, label: `${dt.getDate()} ${maandnamen[dt.getMonth()]} ${dt.getFullYear()}` };
+      }
+      return null;
+    }
 
-  return { naam, datum: datumStr, tijd };
-}
+    function matchAllTimes(str) {
+      // Herkent ook "half drie", "kwart over tien", etc.
+      let tijden = [];
+      // 1. Speciaal: kwart/half/voor/over
+      let specials = [
+        [/\bkwart over (\d{1,2})/i, (m) => ({ h: parseInt(m[1]), m: 15 })],
+        [/\bkwart voor (\d{1,2})/i, (m) => ({ h: parseInt(m[1])-1, m: 45 })],
+        [/\bhalf (\d{1,2})/i, (m) => ({ h: parseInt(m[1])-1, m: 30 })],
+        [/\b(\d{1,2})\s*uur\b/i, (m) => ({ h: parseInt(m[1]), m: 0 })],
+        [/\b(\d{1,2})[:\.](\d{2})/g, (m) => ({ h: parseInt(m[1]), m: parseInt(m[2]) })],
+        [/\b(\d{1,2})\s*over\s*half\s*(\d{1,2})/i, (m) => ({ h: parseInt(m[2])-1, m: 30+parseInt(m[1]) })],
+        [/\b(\d{1,2})\s*voor\s*half\s*(\d{1,2})/i, (m) => ({ h: parseInt(m[2])-1, m: 30-parseInt(m[1]) })],
+        [/\b(\d{1,2})\s*over\s*kwart\s*(\d{1,2})/i, (m) => ({ h: parseInt(m[2])-1, m: 15+parseInt(m[1]) })],
+        [/\b(\d{1,2})\s*voor\s*kwart\s*(\d{1,2})/i, (m) => ({ h: parseInt(m[2])-1, m: 15-parseInt(m[1]) })]
+      ];
+      for (let [regex, fn] of specials) {
+        let m;
+        while ((m = regex.exec(str)) !== null) {
+          let {h, m:mi} = fn(m);
+          if (h<0) h+=24;
+          let tijd = `${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")}`;
+          tijden.push({ tijd, pos: m.index, len: m[0].length });
+        }
+      }
+      // 2. context "middernacht", "middag", enz.
+      let ctx = [
+        [/middernacht/i, "00:00"],
+        [/ochtend/i, "09:00"],
+        [/middag/i, "12:00"],
+        [/avond/i, "19:00"],
+      ];
+      for (let [regex, t] of ctx) {
+        let m = regex.exec(str);
+        if (m) tijden.push({ tijd: t, pos: m.index, len: m[0].length });
+      }
+      // 3. gewone tijden als "13:00"
+      let m;
+      let re = /\b(\d{1,2}):(\d{2})/g;
+      while ((m = re.exec(str)) !== null) {
+        let tijd = `${String(parseInt(m[1])).padStart(2,"0")}:${String(parseInt(m[2])).padStart(2,"0")}`;
+        tijden.push({ tijd, pos: m.index, len: m[0].length });
+      }
+      return tijden.sort((a,b)=>a.pos-b.pos);
+    }
 
+    function matchContextTime(str) {
+      if (str.match(/\bmiddernacht\b/i)) return "00:00";
+      if (str.match(/\bmiddag\b/i)) return "12:00";
+      if (str.match(/\bochtend\b/i)) return "09:00";
+      if (str.match(/\bavond\b/i)) return "19:00";
+      return null;
+    }
 
-</script>
+    function getDatum(dag, dagIndex, explicit, dateDesc) {
+      if (explicit) {
+        return `${explicit.getDate()} ${maandnamen[explicit.getMonth()]} ${explicit.getFullYear()}`;
+      }
+      if (dateDesc) return dateDesc;
+      if (dag && dagIndex >= 0) {
+        return volgendeDatumVoorDag(dagIndex);
+      }
+      return "Onbekend";
+    }
 
+    function volgendeDatumVoorDag(dagIndex) {
+      // dagIndex: 0=maandag .. 6=zondag
+      const vandaag = new Date();
+      // JS: 0=zondag ... 6=zaterdag
+      let vandaagJS = vandaag.getDay(); // 0=zo,1=ma,...
+      // dagIndex 6=zondag->0, anders +1
+      let doelDagJS = (dagIndex === 6) ? 0 : dagIndex + 1;
+      let diff = (doelDagJS - vandaagJS + 7) % 7;
+      if (diff === 0) diff = 7;
+      const nieuweDatum = new Date(vandaag);
+      nieuweDatum.setDate(vandaag.getDate() + diff);
+      return `${nieuweDatum.getDate()} ${maandnamen[nieuweDatum.getMonth()]} ${nieuweDatum.getFullYear()}`;
+    }
+  </script>
 </body>
 </html>
