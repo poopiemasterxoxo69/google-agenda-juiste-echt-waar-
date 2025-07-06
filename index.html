@@ -9,6 +9,7 @@ h1 { text-align: center; }
 textarea, select, button { width: 100%; margin-top: 10px; font-size: 16px; padding: 10px; }
 #kleur { margin-bottom: 20px; }
 label { font-weight: bold; }
+#result { margin-top: 20px; padding: 10px; background: #fff; border: 1px solid #ccc; }
 </style>
 </head>
 <body>
@@ -37,6 +38,8 @@ label { font-weight: bold; }
 
 <button onclick="addEvent()">➕ Voeg toe aan agenda</button>
 
+<div id="result"></div>
+
 <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
@@ -55,24 +58,37 @@ window.onload = ()=>{
 };
 function handleAuthClick(){ if(tokenClient) tokenClient.requestAccessToken(); else alert("Google auth niet geladen."); }
 
-async function getConsensus(text){
-  const aiUrls=[ "https://google-agenda-juiste-echt-waar.vercel.app/api/parse-groq", "https://google-agenda-juiste-echt-waar.vercel.app/api/parse-hf" ];
-  const jsParsed=parseTextToEvent(text);
-  const aiResults=await Promise.all(aiUrls.map(async url=>{ try{let r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({tekst:text})}); return await r.json();}catch{return null;} }));
-  const sources=[jsParsed,...aiResults].filter(x=>x);
-  const fields=['summary','start','end'];
-  let evt={summary:null,start:null,end:null}, errors=[];
-  // compare
-  let titles = sources.map(s=>s.summary);
-  let title = titles.sort((a,b)=> sources.filter(x=>x.summary==a).length - sources.filter(x=>x.summary==b).length).pop();
-  if(sources.filter(x=>x.summary==title).length>=2) evt.summary=title; else errors.push("naam");
-  // datum/tijd combine omitted for brevity...
-  return errors.length?{error:"Geen consensus: "+errors.join(", ")}:evt;
-}
-function parseTextToEvent(text){/* jouw bestaande parser */ return {summary:"",start:{dateTime:""},end:{dateTime:""}};}
-async function checkConflict(e){/* */return false;}
-async function addEvent(){/* gebruik getConsensus etc. */}
+async function addEvent() {
+  const resultDiv = document.getElementById("result");
+  resultDiv.innerHTML = "⏳ Bezig met verwerken...";
 
+  const text = document.getElementById("inputText").value.trim();
+  if (!text) {
+    resultDiv.innerHTML = "❌ Vul eerst een tekst in.";
+    return;
+  }
+
+  try {
+    const response = await fetch("https://google-agenda-juiste-echt-waar.vercel.app/api/consensus", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tekst: text })
+    });
+    const result = await response.json();
+
+    if (response.ok) {
+      resultDiv.innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+      console.log(result);
+      // Hier kun je eventueel automatisch naar Google Calendar pushen
+    } else {
+      resultDiv.innerHTML = `❌ Fout: ${result.error}`;
+      console.error(result);
+    }
+  } catch (err) {
+    resultDiv.innerHTML = "❌ Er ging iets mis bij het aanroepen van de API.";
+    console.error(err);
+  }
+}
 </script>
 </body>
 </html>
