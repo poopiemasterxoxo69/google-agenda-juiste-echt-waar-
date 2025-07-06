@@ -1,19 +1,45 @@
 import fetch from 'node-fetch';
 
 function parseTextLocal(text) {
-  const tijdMatch = text.match(/(\d{1,2}):(\d{2})(?:-(\d{1,2}):(\d{2}))?/);
-  let titel = text.replace(/\d{1,2}[:\-]\d{2}.*/, '').trim() || 'Gebeurtenis';
-  let datum = null;
-  const dateMatch = text.match(/(\d{1,2})-(\d{1,2})-(\d{2,4})/);
-  if (dateMatch) {
-    datum = `${dateMatch[1].padStart(2, '0')}-${dateMatch[2].padStart(2, '0')}-${dateMatch[3].length === 2 ? '20' + dateMatch[3] : dateMatch[3]}`;
+  text = text.toLowerCase();
+  const now = new Date();
+
+  let datum = now;
+  if (text.includes("morgen")) {
+    datum.setDate(now.getDate() + 1);
   } else {
-    const dayMatch = text.match(/\b(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag)\b/i);
-    if (dayMatch) datum = dayMatch[1].toLowerCase();
+    const days = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
+    const dayMatch = text.match(new RegExp(`\\b(${days.join("|")})\\b`, 'i'));
+    if (dayMatch) {
+      let target = days.indexOf(dayMatch[1]);
+      let diff = (target - now.getDay() + 7) % 7;
+      if (diff === 0) diff = 7;
+      datum.setDate(now.getDate() + diff);
+    }
   }
-  let starttijd = tijdMatch ? `${tijdMatch[1].padStart(2, '0')}:${tijdMatch[2]}` : null;
-  let eindtijd = tijdMatch && tijdMatch[3] ? `${tijdMatch[3].padStart(2, '0')}:${tijdMatch[4]}` : null;
-  return { titel, datum, starttijd, eindtijd };
+
+  let tijd = "09:00";
+  const explicietTijd = text.match(/(\d{1,2}):(\d{2})/);
+  const halfMatch = text.match(/half (\d{1,2})/);
+  const heelMatch = text.match(/(\d{1,2}) ?uur/);
+
+  if (explicietTijd) {
+    tijd = `${explicietTijd[1].padStart(2, '0')}:${explicietTijd[2]}`;
+  } else if (halfMatch) {
+    const h = parseInt(halfMatch[1]) - 1;
+    tijd = `${h.toString().padStart(2, '0')}:30`;
+  } else if (heelMatch) {
+    tijd = `${heelMatch[1].padStart(2, '0')}:00`;
+  }
+
+  const titel = text.replace(/(om|half|uur|morgen|\d{1,2}(:\d{2})?)/gi, "").trim() || "Onbekend";
+
+  const [h,m] = tijd.split(":").map(Number);
+  datum.setHours(h,m,0,0);
+  const eindDatum = new Date(datum.getTime() + 60*60*1000);
+  const eindtijd = eindDatum.toISOString().split("T")[1].substring(0,5);
+
+  return { titel, datum: datum.toISOString().split("T")[0], starttijd: tijd, eindtijd };
 }
 
 async function callModel(url, text) {
@@ -30,16 +56,11 @@ async function callModel(url, text) {
 }
 
 export default async function handler(req, res) {
-  // ✅ Voeg CORS‑headers toe
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // ✅ OPTIONS preflight request
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
+  if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).end();
 
   const { tekst } = req.body;
@@ -50,24 +71,22 @@ export default async function handler(req, res) {
     callModel(process.env.HF_URL, tekst)
   ]);
 
-  const sources = [local, groq, hf].filter(s => s && s.titel && s.datum && s.starttijd);
-
-  const fields = ['titel', 'datum', 'starttijd', 'eindtijd'], result = {}, errors = [];
+  const sources = [local, groq, hf].filter(s => s);
+  const fields = ['titel', 'datum', 'starttijd', 'eindtijd'];
+  const result = {}, errors = [];
 
   fields.forEach(f => {
     const counts = {};
-    sources.forEach(src => {
-      const v = src[f] || null;
+    sources.forEach(s => {
+      const v = s[f] || null;
       counts[v] = (counts[v] || 0) + 1;
     });
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
     if (sorted.length && sorted[0][1] >= 2) result[f] = sorted[0][0];
     else errors.push(f);
   });
 
-  if (errors.length) {
-    return res.status(400).json({ error: 'Geen consensus voor velden: ' + errors.join(', ') });
-  }
+  if (errors.length) return res.status(400).json({ error: 'Geen consensus voor velden: ' + errors.join(', ') });
 
-  return res.status(200).json(result);
+  res.status(200).json(result);
 }
