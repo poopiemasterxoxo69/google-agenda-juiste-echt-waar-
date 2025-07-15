@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<title>Agenda Tool</title>
+<style>
+body {
+font-family: sans-serif;
+background-color: #f5f5f5;
+max-width: 700px;
+margin: auto;
+padding: 20px;
+}
+h1 {
+text-align: center;
+}
+textarea, select, button {
+width: 100%;
+margin-top: 10px;
+font-size: 16px;
+padding: 10px;
+}
+#kleur, #duur {
+margin-bottom: 20px;
+}
+label {
+font-weight: bold;
+}
+#output {
+margin-top: 20px;
+background: #fff;
+padding: 15px;
+border: 1px solid #ccc;
+white-space: pre-line;
+}
+.veld {
+margin-bottom: 8px;
+}
+</style>
+</head>
+<body>
+<h1>Agenda Tool</h1>
+
+<textarea id="inputText" rows="8" placeholder="Bijv: fysio maandag half drie of 'kapper 5 juli 14:00'"></textarea>
+
+<label for="kleur">Kies kleur:</label>
+<select id="kleur">
+<option value="random" selected>🎲 Willekeurig</option>
+<option value="11">❤️ Rood (Tomaat)</option>
+<option value="6">🟧 Oranje (Mandarijn)</option>
+<option value="5">💛 Geel (Zonnebloem)</option>
+<option value="10">💚 Donkergroen (Basilicum)</option>
+<option value="2">💚 Lichtgroen (Salie)</option>
+<option value="9">💙 Blauw (Pauw)</option>
+<option value="7">🫐 Bosbes</option>
+<option value="3">💜 Lavendel</option>
+<option value="4">🍇 Paars (Druif)</option>
+<option value="1">💗 Roze (Flamingo)</option>
+<option value="8">⚫ Grijs (Grafiet)</option>
+</select>
+
+<label for="duur">Kies duur:</label>
+<select id="duur">
+<option value="60" selected>⏱ 1 uur</option>
+<option value="30">🕧 30 minuten</option>
+<option value="45">🕐 45 minuten</option>
+<option value="90">🕜 1,5 uur</option>
+<option value="120">🕑 2 uur</option>
+</select>
+
+<label><input type="checkbox" id="heleDag"> Hele dag</label>
+<button onclick="parseEnToon()">🔍 Herken gegevens</button>
+
+<div id="output"></div>
+
+<script src="script_tool.js"></script>
+</body>
+</html>

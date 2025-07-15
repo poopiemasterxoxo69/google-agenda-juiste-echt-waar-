@@ -1,152 +1,146 @@
 <!DOCTYPE html>
-<html>
+<html lang="nl">
 <head>
-<meta charset="UTF-8">
-<title>Agenda Tool met Consensus</title>
-<style>
-body { font-family: sans-serif; background-color: #f5f5f5; max-width: 700px; margin: auto; padding: 20px; }
-h1 { text-align: center; }
-textarea, select, button { width: 100%; margin-top: 10px; font-size: 16px; padding: 10px; }
-#kleur { margin-bottom: 20px; }
-label { font-weight: bold; }
-#result { margin-top: 20px; padding: 10px; background: #fff; border: 1px solid #ccc; }
-</style>
+  <meta charset="UTF-8" />
+  <title>Agenda Chat</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .chat-container {
+      width: 100%;
+      max-width: 600px;
+      height: 90vh;
+      background-color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .chat-header {
+      background-color: #10a37f;
+      color: white;
+      padding: 16px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .chat-log {
+      flex-grow: 1;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-bubble {
+      padding: 12px 16px;
+      border-radius: 16px;
+      max-width: 80%;
+      white-space: pre-line;
+      word-wrap: break-word;
+    }
+
+    .user {
+      align-self: flex-end;
+      background-color: #e5e7eb;
+      border-bottom-right-radius: 0;
+    }
+
+    .bot {
+      align-self: flex-start;
+      background-color: #d1fae5;
+      border-bottom-left-radius: 0;
+    }
+
+    .chat-input-area {
+      display: flex;
+      padding: 12px;
+      border-top: 1px solid #ddd;
+      background-color: #fafafa;
+    }
+
+    .chat-input-area textarea {
+      flex-grow: 1;
+      resize: none;
+      font-size: 16px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    .chat-input-area button {
+      margin-left: 8px;
+      padding: 0 16px;
+      font-size: 16px;
+      border-radius: 8px;
+      background-color: #10a37f;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    .chat-input-area button:hover {
+      background-color: #0e7c64;
+    }
+
+    /* Verborgen elementen */
+    #kleur, #duur, #heleDag {
+      display: none;
+    }
+  </style>
 </head>
 <body>
-<h1>Agenda Tool</h1>
-<button onclick="handleAuthClick()">Log in met Google</button>
-<p id="status">Niet ingelogd</p>
+  <div class="chat-container">
+    <div class="chat-header">📅 Agenda Assistent</div>
 
-<textarea id="inputText" rows="4" placeholder="Bijv: kapper maandag 14:00 of vergadering 5 juli 10:00-11:00"></textarea>
+    <div id="chat-log" class="chat-log">
+      <!-- Dynamische chatberichten komen hier -->
+    </div>
 
-<label for="kleur">Kies kleur:</label>
-<select id="kleur">
-<option value="random" selected>🎲 Willekeurig</option>
-<option value="11">❤️ Rood</option>
-<option value="6">🟧 Oranje</option>
-<option value="5">💛 Geel</option>
-<option value="10">💚 Donkergroen</option>
-<option value="2">💚 Lichtgroen</option>
-<option value="9">💙 Blauw</option>
-<option value="3">💜 Lavendel</option>
-<option value="4">🍇 Paars</option>
-<option value="1">💗 Roze</option>
-<option value="8">⚫ Grijs</option>
-</select>
+    <div class="chat-input-area">
+      <textarea id="inputText" rows="1" placeholder="Typ hier iets als 'kapper 5 juli 14:00'..."></textarea>
+      <button onclick="parseEnToon()">⏎</button>
+    </div>
+  </div>
 
-<label><input type="checkbox" id="heleDag"> Hele dag</label>
+  <!-- Verborgen instellingen voor de parser (blijven nodig) -->
+  <select id="kleur">
+    <option value="random" selected>Willekeurig</option>
+    <option value="11">Rood</option>
+    <option value="6">Oranje</option>
+    <option value="5">Geel</option>
+    <option value="10">Donkergroen</option>
+    <option value="2">Lichtgroen</option>
+    <option value="9">Blauw</option>
+    <option value="7">Bosbes</option>
+    <option value="3">Lavendel</option>
+    <option value="4">Paars</option>
+    <option value="1">Roze</option>
+    <option value="8">Grijs</option>
+  </select>
 
-<button onclick="addEvent()">➕ Voeg toe aan agenda</button>
+  <select id="duur">
+    <option value="60" selected>60</option>
+    <option value="30">30</option>
+    <option value="45">45</option>
+    <option value="90">90</option>
+    <option value="120">120</option>
+  </select>
 
-<div id="result"></div>
+  <input type="checkbox" id="heleDag" />
 
-<script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-
-<script>
-let tokenClient;
-let accessToken = null;
-
-function gapiLoaded() {
-  gapi.load('client', initializeGapiClient);
-}
-
-async function initializeGapiClient() {
-  await gapi.client.init({
-    apiKey: '',
-    discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
-  });
-}
-
-window.onload = () => {
-  if (typeof google !== "undefined") {
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
-      scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events',
-      callback: (tokenResponse) => {
-        accessToken = tokenResponse.access_token;
-        document.getElementById("status").innerText = "Ingelogd ✔";
-      },
-    });
-  }
-};
-
-function handleAuthClick() {
-  if (tokenClient) {
-    tokenClient.requestAccessToken();
-  } else {
-    alert("Google auth is nog niet geladen.");
-  }
-}
-
-async function addEvent() {
-  const resultDiv = document.getElementById("result");
-  resultDiv.innerHTML = "⏳ Bezig met verwerken...";
-
-  const text = document.getElementById("inputText").value.trim();
-  if (!text) {
-    resultDiv.innerHTML = "❌ Vul eerst een tekst in.";
-    return;
-  }
-
-  try {
-    const response = await fetch("https://google-agenda-juiste-echt-waar.vercel.app/api/consensus", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tekst: text })
-    });
-    const result = await response.json();
-
-    if (!response.ok) {
-      resultDiv.innerHTML = `❌ Fout: ${result.error}`;
-      console.error(result);
-      return;
-    }
-
-    resultDiv.innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
-
-    if (!accessToken) {
-      alert("Log eerst in met Google om het event toe te voegen.");
-      return;
-    }
-
-    const kleuren = ["1","2","3","4","5","6","7","8","9","10","11"];
-    const kleurSelect = document.getElementById("kleur");
-    const gekozen = kleurSelect.value === "random" ? kleuren[Math.floor(Math.random() * kleuren.length)] : kleurSelect.value;
-
-    const event = {
-      summary: result.titel,
-      colorId: gekozen
-    };
-
-    if (document.getElementById("heleDag").checked) {
-      event.start = { date: result.datum };
-      event.end = { date: result.datum };
-    } else {
-      const datumStr = result.datum || new Date().toISOString().split("T")[0];
-      event.start = { dateTime: `${datumStr}T${result.starttijd}:00`, timeZone: 'Europe/Amsterdam' };
-      event.end = { dateTime: `${datumStr}T${result.eindtijd || result.starttijd}:00`, timeZone: 'Europe/Amsterdam' };
-    }
-
-    const conflict = await gapi.client.calendar.events.list({
-      calendarId: 'primary',
-      timeMin: event.start.dateTime || (event.start.date + "T00:00:00Z"),
-      timeMax: event.end.dateTime || (event.end.date + "T23:59:59Z"),
-      singleEvents: true,
-      orderBy: 'startTime'
-    });
-
-    if (conflict.result.items.length > 0 && !confirm("Er is al iets gepland op deze dag. Toch toevoegen?")) return;
-
-    const request = gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
-    await request.execute();
-    alert("✅ Event toegevoegd!");
-
-  } catch (err) {
-    resultDiv.innerHTML = "❌ Er ging iets mis bij het verwerken of toevoegen.";
-    console.error(err);
-  }
-}
-</script>
+  <script src="script_tool.js"></script>
 </body>
 </html>
