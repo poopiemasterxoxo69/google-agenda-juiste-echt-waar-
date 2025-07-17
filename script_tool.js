@@ -699,30 +699,46 @@ async function checkConflictingEvents(start, end) {
   });
 }
 
+function combineDateTime(datum, tijd) {
+  if (!datum || !tijd) return undefined;
+  const [hh, mm] = tijd.split(':').map(Number);
+  const d = new Date(datum);
+  d.setHours(hh, mm, 0, 0);
+  return d.toISOString();
+}
+
+function berekenEindtijd(datum, tijd, duur) {
+  if (!datum || !tijd) return undefined;
+  const [hh, mm] = tijd.split(':').map(Number);
+  const d = new Date(datum);
+  d.setHours(hh, mm, 0, 0);
+  d.setMinutes(d.getMinutes() + parseInt(duur || 60));
+  return d.toISOString();
+}
+
 // Voeg afspraken toe aan Google Agenda
+function getActueleAfspraken() {
+  if (window._bewerkteAfspraken && Array.isArray(window._bewerkteAfspraken)) {
+    return window._bewerkteAfspraken;
+  }
+  // Indien geen edits: parse opnieuw uit inputText
+  const tekst = document.getElementById("inputText").value;
+  const tijdMatches = tekst.match(/(\d{1,2}[:.]\d{2})/g);
+  if (tijdMatches && tijdMatches.length > 1) {
+    return parseMeerdereAfsprakenInRegel(tekst);
+  }
+  return [parseTextToEvent(tekst)];
+}
+
 async function addEvent() {
   if (!accessToken) {
     alert("Log eerst in met Google.");
     return;
   }
-  const tekst = document.getElementById("inputText").value;
+  const afspraken = getActueleAfspraken();
   const kleur = document.getElementById("kleur").value;
   const duur = parseInt(document.getElementById("duur").value);
   const heleDag = document.getElementById("heleDag").checked;
-  const tijdMatches = tekst.match(/(\d{1,2}[:.]\d{2})/g);
-
-  // Detecteer of er meerdere afspraken zijn
-  let meerdereAfspraken = false;
-  let dagRegex = /(zondag|maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag)/i;
-  let dagMatches = tekst.match(new RegExp(dagRegex, 'gi'));
-  let datumMatches = tekst.match(/\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b/g);
-  if ((tijdMatches && tijdMatches.length > 1) || (dagMatches && dagMatches.length > 1) || (datumMatches && datumMatches.length > 1)) {
-    meerdereAfspraken = true;
-  }
-
-  let afspraken = [];
-  if (meerdereAfspraken) {
-    afspraken = parseMeerdereAfsprakenInRegel(tekst);
     // Hoofd-titel bepalen voor fallback
     let dagNamen = ["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
     let dagRegex2 = dagNamen.join("|");
@@ -812,11 +828,17 @@ async function addEvent() {
       }
     }
     try {
-      await gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
+      // Gebruik actuele waarden uit afspraak-object
+      const eventObj = {
+        summary: afspraak.titel || afspraak.summary || '',
+        start: afspraak.datum ? (heleDag ? { date: afspraak.datum.toISOString().split('T')[0] } : { dateTime: combineDateTime(afspraak.datum, afspraak.tijd) }) : {},
+        end: afspraak.datum ? (heleDag ? { date: afspraak.datum.toISOString().split('T')[0] } : { dateTime: berekenEindtijd(afspraak.datum, afspraak.tijd, afspraak.duur || duur) }) : {},
+        colorId: afspraak.kleur && afspraak.kleur !== 'random' ? afspraak.kleur : undefined
+      };
+      await gapi.client.calendar.events.insert({ calendarId: 'primary', resource: eventObj });
       toegevoegd++;
-    } catch (e) {
-      console.error("Fout bij toevoegen event:", e);
-    }
+      details += `\nTitel: ${eventObj.summary}\nDatum: ${heleDag ? eventObj.start.date : (afspraak.datum ? afspraak.datum.toLocaleString() : '')}\nTijd: ${afspraak.tijd || ''}\nKleur: ${kleurLabelToe(afspraak.kleur)}\nDuur: ${(afspraak.duur || duur)} min\n---`;
+    } catch (e) {}
   }
   alert(`${toegevoegd} afspraak/afspraken toegevoegd aan je Google Agenda!`);
 }
