@@ -74,11 +74,13 @@
 <body>
   <h1>Agenda Tool</h1>
   <button onclick="handleAuthClick()">Log in met Google</button>
-  <p id="status">Niet ingelogd</p>
-  <textarea id="inputText" rows="4" placeholder="Bijv: kapper 5 juli 14:00 of vergadering 14:00 op 5/7"></textarea>
+<p id="status">Niet ingelogd</p>
+<textarea id="inputText" rows="4" placeholder="Bijv: kapper 5 juli 14:00 of vergadering 14:00 op 5/7"></textarea>
 
-  <label for="kleur">Kies kleur:</label>
-  <select id="kleur">
+<button id="herkenButton" style="background:#34a853; margin-top:10px;">🔎 Herken gegevens</button>
+
+<label for="kleur">Kies kleur:</label>
+<select id="kleur">
     <option value="random" selected>🎲 Willekeurig</option>
     <option value="11">❤️ Rood (Tomaat)</option>
     <option value="6">🟧 Oranje (Mandarijn)</option>
@@ -95,9 +97,12 @@
 
   <label><input type="checkbox" id="heleDag"> Hele dag</label>
 
-  <button onclick="addEvent()">➕ Voeg toe aan agenda</button>
+  <button id="addEventButton">➕ Voeg toe aan agenda</button>
 
-  <script>
+<div id="output"></div>
+<div id="meerdereOutput"></div>
+
+<script>
     // --- Google API Loader ---
     (function ensureGapiLoadedAndCallGapiLoaded() {
       if (window.gapi) {
