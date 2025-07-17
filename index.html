@@ -54,7 +54,6 @@
      data-callback="handleCredentialResponse"
      data-auto_prompt="false">
   </div>
-  <div class="g_id_signin" data-type="standard"></div>
   <button onclick="handleAuthClick()">Log in met Google</button>
   <p id="status">Niet ingelogd</p>
 
@@ -120,6 +119,12 @@
           },
         });
       }
+
+      // Voeg event listener toe aan de knop
+      const voegToeBtn = document.getElementById('voegToeButton');
+      if (voegToeBtn) {
+        voegToeBtn.addEventListener('click', addEvent);
+      }
     };
 
     function handleAuthClick() {
@@ -127,6 +132,62 @@
         tokenClient.requestAccessToken();
       } else {
         alert("Google auth is nog niet geladen.");
+      }
+    }
+
+    function parseTextToEvent(text) {
+      // Simpele parser: zoekt tijd en datum in tekst
+      const tijdRegex = /(\d{1,2}):(\d{2})/;
+      const dateRegex = /(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/;
+      let startH = 0, startM = 0;
+      let datum = new Date();
+      let tijdMatch = text.match(tijdRegex);
+      if (tijdMatch) {
+        startH = parseInt(tijdMatch[1]);
+        startM = parseInt(tijdMatch[2]);
+      }
+      let dateMatch = text.match(dateRegex);
+      if (dateMatch) {
+        let jaar = dateMatch[3] ? parseInt(dateMatch[3]) : datum.getFullYear();
+        let maand = parseInt(dateMatch[2]) - 1;
+        let dag = parseInt(dateMatch[1]);
+        datum = new Date(jaar, maand, dag, startH, startM);
+      } else {
+        datum.setHours(startH, startM, 0, 0);
+      }
+      return { titel: text, datum };
+    }
+
+    async function addEvent() {
+      if (!accessToken) {
+        alert("Log eerst in met Google.");
+        return;
+      }
+      const text = document.getElementById('inputText').value;
+      const kleur = document.getElementById('kleur').value;
+      const duur = parseInt(document.getElementById('duur').value);
+      const heleDag = document.getElementById('heleDag').checked;
+      const eventData = parseTextToEvent(text);
+      let start, end;
+      if (heleDag) {
+        start = { date: eventData.datum.toISOString().slice(0,10) };
+        end = { date: eventData.datum.toISOString().slice(0,10) };
+      } else {
+        start = { dateTime: eventData.datum.toISOString(), timeZone: 'Europe/Amsterdam' };
+        let endDate = new Date(eventData.datum.getTime() + duur*60000);
+        end = { dateTime: endDate.toISOString(), timeZone: 'Europe/Amsterdam' };
+      }
+      const event = {
+        summary: eventData.titel,
+        start,
+        end,
+        colorId: kleur === 'random' ? undefined : kleur
+      };
+      try {
+        await gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
+        alert('Event toegevoegd!\nTitel: ' + event.summary + '\nDatum: ' + (heleDag ? start.date : eventData.datum.toLocaleString()) + '\nKleur: ' + kleur + '\nDuur: ' + duur + ' min');
+      } catch (e) {
+        alert('Fout bij toevoegen event: ' + e.message);
       }
     }
   </script>

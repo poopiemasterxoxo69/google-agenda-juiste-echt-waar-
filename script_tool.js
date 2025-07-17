@@ -384,11 +384,19 @@ async function addEvent() {
       };
     }
     try {
-      await gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
-      toegevoegd++;
+      const response = await gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
+      if (response && response.result && response.result.id) {
+        toegevoegd++;
+      } else {
+        throw new Error('Event niet toegevoegd.');
+      }
     } catch (e) {
       console.error("Fout bij toevoegen event:", e);
+      alert("Fout bij toevoegen van event: " + (e.message || e));
+      return;
     }
   }
-  alert(`${toegevoegd} afspraak/afspraken toegevoegd aan je Google Agenda!`);
+  if (toegevoegd > 0) {
+    alert(`${toegevoegd} afspraak/afspraken succesvol toegevoegd aan je Google Agenda!`);
+  }
 }
