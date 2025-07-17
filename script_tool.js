@@ -1,3 +1,41 @@
+(function ensureGapiLoadedAndCallGapiLoaded() {
+  // Controleer of gapi al beschikbaar is
+  if (window.gapi) {
+    // gapi is al geladen, roep direct gapiLoaded aan
+    if (typeof window.gapiLoaded === 'function') {
+      window.gapiLoaded();
+    }
+    return;
+  }
+
+  // Controleer of het script al bestaat
+  var existingScript = document.querySelector('script[src="https://apis.google.com/js/api.js"]');
+  if (existingScript) {
+    // Voeg een onload toe als het script nog niet geladen is
+    if (!existingScript.hasAttribute('data-gapi-onload')) {
+      existingScript.setAttribute('data-gapi-onload', '1');
+      existingScript.addEventListener('load', function() {
+        if (typeof window.gapiLoaded === 'function') {
+          window.gapiLoaded();
+        }
+      });
+    }
+    return;
+  }
+
+  // Script nog niet aanwezig: injecteer het en stel onload in
+  var script = document.createElement('script');
+  script.src = 'https://apis.google.com/js/api.js';
+  script.async = true;
+  script.defer = true;
+  script.onload = function() {
+    if (typeof window.gapiLoaded === 'function') {
+      window.gapiLoaded();
+    }
+  };
+  document.head.appendChild(script);
+})();
+
 // **script_tool.js** (geüpdatet)
 
 // Hulpfuncties blijven ongewijzigd:
