@@ -11,6 +11,23 @@
       margin: auto;
       padding: 20px;
     }
+    /* Stijl voor de aanpas (edit) knop rechtsboven in een afspraakblok */
+    .aanpas-btn {
+      position: absolute;
+      top: 40px;
+      left: 300px;
+      font-size: 16px;
+      padding: 0;
+      background: transparent;
+      border: black;
+      border-width: 10px;
+      box-shadow: none;
+      border-radius: 0;
+      line-height: 1;
+      min-width: unset;
+      cursor: pointer;
+      z-index: 2;
+    }
     h1 {
       text-align: center;
     }
@@ -85,11 +102,46 @@
   </select>
 
   <label><input type="checkbox" id="heleDag"> Hele dag</label>
-  <button id="herkenButton">🔍 Herken gegevens</button>
+  <button id="herkenButton" onclick="deleteAllAfspraken();parseEnToon();">🔍 Herken gegevens</button>
   <button id="voegToeButton">📅 Voeg toe aan agenda</button>
 
-  <div id="output"></div>
+  <div id="output" class="afspraken-lijst"></div>
   <div id="meerdereOutput"></div>
+
+  <template id="afspraak-edit-template">
+    <div class="afspraak-bewerkbaar" data-index="">
+      <label>Titel: <input type="text" class="edit-titel" /></label><br>
+      <label>Datum: <input type="date" class="edit-datum" /></label><br>
+      <label>Tijd: <input type="time" class="edit-tijd" /></label><br>
+      <label>Kleur:
+        <select class="edit-kleur">
+          <option value="random">🎲 Willekeurig</option>
+          <option value="11">❤️ Rood (Tomaat)</option>
+          <option value="6">🟧 Oranje (Mandarijn)</option>
+          <option value="5">💛 Geel (Zonnebloem)</option>
+          <option value="10">💚 Donkergroen (Basilicum)</option>
+          <option value="2">💚 Lichtgroen (Salie)</option>
+          <option value="9">💙 Blauw (Pauw)</option>
+          <option value="7">🫐 Bosbes</option>
+          <option value="3">💜 Lavendel</option>
+          <option value="4">🍇 Paars (Druif)</option>
+          <option value="1">💗 Roze (Flamingo)</option>
+          <option value="8">⚫ Grijs (Grafiet)</option>
+        </select>
+      </label><br>
+      <label>Duur:
+        <select class="edit-duur">
+          <option value="60">⏱ 1 uur</option>
+          <option value="30">🕧 30 minuten</option>
+          <option value="45">🕐 45 minuten</option>
+          <option value="90">🕜 1,5 uur</option>
+          <option value="120">🕑 2 uur</option>
+        </select>
+      </label><br>
+      <label><input type="checkbox" class="edit-heledag"> Hele dag</label><br>
+      <button class="save-edit" style="background:#2ecc40;color:white;">Opslaan</button>
+    </div>
+  </template>
 
   <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
