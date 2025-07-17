@@ -283,21 +283,23 @@ function parseMeerdereAfsprakenInRegel(tekst) {
   return afspraken;
 }
 
-// TitelOpschoner: haalt tijden, datums en de woorden 'datum' en 'tijd' uit de tekst en geeft de rest als titel terug
-function titelOpschoner(tekst) {
-  let t = tekst;
-  // Verwijder tijdnotaties zoals 12:00, 9.30, 14-00
-  t = t.replace(/\b\d{1,2}[:\.-]\d{2}\b/g, '');
-  // Verwijder datum notaties zoals 21-7-2025, 21/7/2025, 21 juli 2025
-  t = t.replace(/\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b/g, '');
-  t = t.replace(/\b\d{1,2}\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)(\s+\d{4})?/gi, '');
-  // Verwijder het woord 'datum' en 'tijd' (ook met : erachter)
-  t = t.replace(/\b(datum|tijd)\b:?/gi, '');
-  // Verwijder losse cijfers (zoals dagnummer)
-  t = t.replace(/\b\d{1,2}\b/g, '');
-  // Extra opschoning: dubbele spaties, trim
-  t = t.replace(/\s+/g, ' ').trim();
-  // Eerste letter hoofdletter
+// Titelopschoner: haalt tijden, datums, 'datum', 'tijd' en andere bekende labels uit tekst
+function titelopschoner(tekst) {
+  let t = tekst.toLowerCase();
+  // Verwijder tijdstippen (zoals 12:00, 9.30, 18u)
+  t = t.replace(/\b\d{1,2}[:.]\d{2}(?:\su)?\b/g, "");
+  // Verwijder datums (zoals 21-7-2025, 5/8/2025, 5 juli, 5 augustus)
+  t = t.replace(/\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b/g, "");
+  t = t.replace(/\b\d{1,2}\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)\b/g, "");
+  // Verwijder de woorden 'datum', 'tijd' en dagen van de week (met of zonder dubbele punt)
+  t = t.replace(/\b(datum|tijd|zondag|maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag)\b:?/g, "");
+  // Verwijder overige labels
+  t = t.replace(/\b(uur|om|op|tot|van|en|week)\b/g, "");
+  // Verwijder losse cijfers
+  t = t.replace(/\b\d+\b/g, "");
+  // Verwijder dubbele spaties en trim
+  t = t.replace(/\s+/g, " ").trim();
+  // Eerste letter hoofdletter, rest klein
   if (t.length > 0) {
     t = t.charAt(0).toUpperCase() + t.slice(1);
   } else {
@@ -331,7 +333,7 @@ function parseEnToon() {
         ? afspraak.datum.toLocaleDateString("nl-NL")
         : "Onbekend";
       html += `
-        <div class="veld"><strong>📌 Titel:</strong> ${afspraak.titel}</div>
+        <div class="veld"><strong>📌 Titel:</strong> ${titelopschoner(afspraak.titel)}</div>
         <div class="veld"><strong>📅 Datum:</strong> ${datumStr}</div>
         <div class="veld"><strong>⏰ Starttijd:</strong> ${heleDag ? "hele dag" : (afspraak.tijd || "Onbekend")}</div>
         <div class="veld"><strong>🕒 Duur:</strong> ${heleDag ? "n.v.t." : `${duur} minuten`}</div>
@@ -376,11 +378,40 @@ async function addEvent() {
   const heleDag = document.getElementById("heleDag").checked;
   const tijdMatches = tekst.match(/(\d{1,2}[:.]\d{2})/g);
 
+  // Detecteer of er meerdere afspraken zijn
+  let meerdereAfspraken = false;
+  let dagRegex = /(zondag|maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag)/i;
+  let dagMatches = tekst.match(new RegExp(dagRegex, 'gi'));
+  let datumMatches = tekst.match(/\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b/g);
+  if ((tijdMatches && tijdMatches.length > 1) || (dagMatches && dagMatches.length > 1) || (datumMatches && datumMatches.length > 1)) {
+    meerdereAfspraken = true;
+  }
+
   let afspraken = [];
-  if (tijdMatches && tijdMatches.length > 1) {
+  if (meerdereAfspraken) {
     afspraken = parseMeerdereAfsprakenInRegel(tekst);
+    // Hoofd-titel bepalen voor fallback
+    let dagNamen = ["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
+    let dagRegex2 = dagNamen.join("|");
+    let eersteBlok = tekst.split(new RegExp(`[\r\n\.]+|, (?=${dagRegex2})`, 'i')).find(r => new RegExp(`\\b(${dagRegex2})\\b`, 'i').test(r));
+    let hoofdTitel = null;
+    if (eersteBlok) {
+      let dagMatch = eersteBlok.match(new RegExp(`^(.*?)\\b(${dagRegex2})\\b`, 'i'));
+      if (dagMatch && dagMatch[1].trim().length > 0) {
+        hoofdTitel = titelopschoner(dagMatch[1].trim());
+      }
+    }
+    // Fallback hoofd-titel toepassen
+    afspraken = afspraken.map(afspraak => {
+      let schoneTitel = titelopschoner(afspraak.titel);
+      if (!schoneTitel || schoneTitel === "Onbekende afspraak") {
+        schoneTitel = hoofdTitel ? hoofdTitel : "Onbekende afspraak";
+      }
+      return { ...afspraak, titel: schoneTitel };
+    });
   } else {
     afspraken = [parseTextToEvent(tekst)];
+    afspraken = afspraken.map(afspraak => ({ ...afspraak, titel: titelopschoner(afspraak.titel) }));
   }
 
   let toegevoegd = 0;
@@ -391,10 +422,10 @@ async function addEvent() {
       const startDate = afspraak.datum ? afspraak.datum.toISOString().split("T")[0] : undefined;
       const endDate = afspraak.datum ? new Date(afspraak.datum.getTime() + 24 * 60 * 60 * 1000).toISOString().split("T")[0] : undefined;
       event = {
-        summary: afspraak.titel,
+        summary: titelopschoner(afspraak.titel),
         start: { date: startDate },
         end: { date: endDate },
-        colorId: kleur === "random" ? undefined : kleur
+        colorId: (kleur === 'random' ? (function() { const kleuren = ["1","2","3","4","5","6","7","8","9","10","11"]; return kleuren[Math.floor(Math.random()*kleuren.length)]; })() : kleur)
       };
     } else {
       // Event met tijd
@@ -403,10 +434,10 @@ async function addEvent() {
       start.setHours(h, m, 0, 0);
       let end = new Date(start.getTime() + duur * 60000);
       event = {
-        summary: afspraak.titel,
+        summary: titelopschoner(afspraak.titel),
         start: { dateTime: start.toISOString(), timeZone: 'Europe/Amsterdam' },
         end: { dateTime: end.toISOString(), timeZone: 'Europe/Amsterdam' },
-        colorId: kleur === "random" ? undefined : kleur
+        colorId: (kleur === 'random' ? (function() { const kleuren = ["1","2","3","4","5","6","7","8","9","10","11"]; return kleuren[Math.floor(Math.random()*kleuren.length)]; })() : kleur)
       };
     }
     try {

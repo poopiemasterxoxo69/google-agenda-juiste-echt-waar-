@@ -167,11 +167,47 @@
       const kleur = document.getElementById('kleur').value;
       const duur = parseInt(document.getElementById('duur').value);
       const heleDag = document.getElementById('heleDag').checked;
-      if (typeof window.parseMeerdereAfsprakenInRegel !== 'function') {
-        alert('De functie parseMeerdereAfsprakenInRegel is niet beschikbaar. Zorg dat script_tool.js correct wordt geladen.');
-        return;
+      // Detecteer of er meerdere afspraken zijn
+      let meerdereAfspraken = false;
+      let tijdMatches = text.match(/(\d{1,2}[:.]\d{2})/g);
+      let dagRegex = /(zondag|maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag)/i;
+      let dagMatches = text.match(new RegExp(dagRegex, 'gi'));
+      let datumMatches = text.match(/\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b/g);
+      if ((tijdMatches && tijdMatches.length > 1) || (dagMatches && dagMatches.length > 1) || (datumMatches && datumMatches.length > 1)) {
+        meerdereAfspraken = true;
       }
-      const afspraken = window.parseMeerdereAfsprakenInRegel(text);
+      let afspraken = [];
+      if (meerdereAfspraken) {
+        if (typeof window.parseMeerdereAfsprakenInRegel !== 'function') {
+          alert('De functie parseMeerdereAfsprakenInRegel is niet beschikbaar. Zorg dat script_tool.js correct wordt geladen.');
+          return;
+        }
+        afspraken = window.parseMeerdereAfsprakenInRegel(text);
+        // Hoofd-titel bepalen voor fallback
+        let dagNamen = ["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
+        let dagRegex2 = dagNamen.join("|");
+        let eersteBlok = text.split(new RegExp(`[\r\n\.]+|, (?=${dagRegex2})`, 'i')).find(r => new RegExp(`\\b(${dagRegex2})\\b`, 'i').test(r));
+        let hoofdTitel = null;
+        if (eersteBlok) {
+          let dagMatch = eersteBlok.match(new RegExp(`^(.*?)\\b(${dagRegex2})\\b`, 'i'));
+          if (dagMatch && dagMatch[1].trim().length > 0) {
+            hoofdTitel = window.titelopschoner ? window.titelopschoner(dagMatch[1].trim()) : dagMatch[1].trim();
+          }
+        }
+        // Fallback hoofd-titel toepassen
+        afspraken = afspraken.map(afspraak => {
+          let schoneTitel = window.titelopschoner ? window.titelopschoner(afspraak.titel) : afspraak.titel;
+          if (!schoneTitel || schoneTitel === "Onbekende afspraak") {
+            schoneTitel = hoofdTitel ? hoofdTitel : "Onbekende afspraak";
+          }
+          return { ...afspraak, titel: schoneTitel };
+        });
+      } else {
+        // Simpele parser voor 1 afspraak
+        let afspraak = window.parseTextToEvent ? window.parseTextToEvent(text) : { titel: text, datum: new Date() };
+        afspraak.titel = window.titelopschoner ? window.titelopschoner(afspraak.titel) : afspraak.titel;
+        afspraken = [afspraak];
+      }
       if (!afspraken.length) {
         alert('Geen afspraken gevonden in de tekst.');
         return;
