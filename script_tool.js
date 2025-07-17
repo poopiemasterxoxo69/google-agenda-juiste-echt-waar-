@@ -283,6 +283,29 @@ function parseMeerdereAfsprakenInRegel(tekst) {
   return afspraken;
 }
 
+// TitelOpschoner: haalt tijden, datums en de woorden 'datum' en 'tijd' uit de tekst en geeft de rest als titel terug
+function titelOpschoner(tekst) {
+  let t = tekst;
+  // Verwijder tijdnotaties zoals 12:00, 9.30, 14-00
+  t = t.replace(/\b\d{1,2}[:\.-]\d{2}\b/g, '');
+  // Verwijder datum notaties zoals 21-7-2025, 21/7/2025, 21 juli 2025
+  t = t.replace(/\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b/g, '');
+  t = t.replace(/\b\d{1,2}\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)(\s+\d{4})?/gi, '');
+  // Verwijder het woord 'datum' en 'tijd' (ook met : erachter)
+  t = t.replace(/\b(datum|tijd)\b:?/gi, '');
+  // Verwijder losse cijfers (zoals dagnummer)
+  t = t.replace(/\b\d{1,2}\b/g, '');
+  // Extra opschoning: dubbele spaties, trim
+  t = t.replace(/\s+/g, ' ').trim();
+  // Eerste letter hoofdletter
+  if (t.length > 0) {
+    t = t.charAt(0).toUpperCase() + t.slice(1);
+  } else {
+    t = "Onbekende afspraak";
+  }
+  return t;
+}
+
 // Functie die wordt aangeroepen bij het klikken op "Herken gegevens"
 function parseEnToon() {
   const tekst = document.getElementById("inputText").value;
