@@ -2,144 +2,94 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <title>Agenda Chat</title>
+  <title>Agenda Tool</title>
   <style>
     body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #f0f0f0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+      font-family: sans-serif;
+      background-color: #f5f5f5;
+      max-width: 700px;
+      margin: auto;
+      padding: 20px;
     }
-
-    .chat-container {
-      width: 100%;
-      max-width: 600px;
-      height: 90vh;
-      background-color: #ffffff;
-      display: flex;
-      flex-direction: column;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      overflow: hidden;
-    }
-
-    .chat-header {
-      background-color: #10a37f;
-      color: white;
-      padding: 16px;
+    h1 {
       text-align: center;
-      font-size: 20px;
-      font-weight: bold;
     }
-
-    .chat-log {
-      flex-grow: 1;
-      padding: 16px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .chat-bubble {
-      padding: 12px 16px;
-      border-radius: 16px;
-      max-width: 80%;
-      white-space: pre-line;
-      word-wrap: break-word;
-    }
-
-    .user {
-      align-self: flex-end;
-      background-color: #e5e7eb;
-      border-bottom-right-radius: 0;
-    }
-
-    .bot {
-      align-self: flex-start;
-      background-color: #d1fae5;
-      border-bottom-left-radius: 0;
-    }
-
-    .chat-input-area {
-      display: flex;
-      padding: 12px;
-      border-top: 1px solid #ddd;
-      background-color: #fafafa;
-    }
-
-    .chat-input-area textarea {
-      flex-grow: 1;
-      resize: none;
+    textarea, select, button {
+      width: 100%;
+      margin-top: 10px;
       font-size: 16px;
       padding: 10px;
-      border-radius: 8px;
+    }
+    #kleur, #duur {
+      margin-bottom: 20px;
+    }
+    label {
+      font-weight: bold;
+    }
+    #output {
+      margin-top: 20px;
+      background: #fff;
+      padding: 15px;
       border: 1px solid #ccc;
     }
-
-    .chat-input-area button {
-      margin-left: 8px;
-      padding: 0 16px;
-      font-size: 16px;
-      border-radius: 8px;
-      background-color: #10a37f;
-      color: white;
-      border: none;
-      cursor: pointer;
+    .veld {
+      margin-bottom: 8px;
     }
 
-    .chat-input-area button:hover {
-      background-color: #0e7c64;
-    }
+    #meerdereOutput {
+  margin-top: 20px;
+  background: #fff;
+  padding: 15px;
+  border: 1px solid #ccc;
+}
 
-    /* Verborgen elementen */
-    #kleur, #duur, #heleDag {
-      display: none;
-    }
   </style>
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
-  <div class="chat-container">
-    <div class="chat-header">📅 Agenda Assistent</div>
-
-    <div id="chat-log" class="chat-log">
-      <!-- Dynamische chatberichten komen hier -->
-    </div>
-
-    <div class="chat-input-area">
-      <textarea id="inputText" rows="1" placeholder="Typ hier iets als 'kapper 5 juli 14:00'..."></textarea>
-      <button onclick="parseEnToon()">⏎</button>
-    </div>
+  <h1>Agenda Tool</h1>
+  <div id="g_id_onload"
+     data-client_id="YOUR_CLIENT_ID"
+     data-callback="handleCredentialResponse"
+     data-auto_prompt="false">
   </div>
+  <div class="g_id_signin" data-type="standard"></div>
+  <p id="status">Niet ingelogd</p>
 
-  <!-- Verborgen instellingen voor de parser (blijven nodig) -->
+  <textarea id="inputText" rows="4" placeholder="Bijv: fysio maandag half drie of 'kapper 5 juli 14:00'"></textarea>
+
+  <label for="kleur">Kies kleur:</label>
   <select id="kleur">
-    <option value="random" selected>Willekeurig</option>
-    <option value="11">Rood</option>
-    <option value="6">Oranje</option>
-    <option value="5">Geel</option>
-    <option value="10">Donkergroen</option>
-    <option value="2">Lichtgroen</option>
-    <option value="9">Blauw</option>
-    <option value="7">Bosbes</option>
-    <option value="3">Lavendel</option>
-    <option value="4">Paars</option>
-    <option value="1">Roze</option>
-    <option value="8">Grijs</option>
+    <option value="random" selected>🎲 Willekeurig</option>
+    <option value="11">❤️ Rood (Tomaat)</option>
+    <option value="6">🟧 Oranje (Mandarijn)</option>
+    <option value="5">💛 Geel (Zonnebloem)</option>
+    <option value="10">💚 Donkergroen (Basilicum)</option>
+    <option value="2">💚 Lichtgroen (Salie)</option>
+    <option value="9">💙 Blauw (Pauw)</option>
+    <option value="7">🫐 Bosbes</option>
+    <option value="3">💜 Lavendel</option>
+    <option value="4">🍇 Paars (Druif)</option>
+    <option value="1">💗 Roze (Flamingo)</option>
+    <option value="8">⚫ Grijs (Grafiet)</option>
   </select>
 
+  <label for="duur">Kies duur:</label>
   <select id="duur">
-    <option value="60" selected>60</option>
-    <option value="30">30</option>
-    <option value="45">45</option>
-    <option value="90">90</option>
-    <option value="120">120</option>
+    <option value="60" selected>⏱ 1 uur</option>
+    <option value="30">🕧 30 minuten</option>
+    <option value="45">🕐 45 minuten</option>
+    <option value="90">🕜 1,5 uur</option>
+    <option value="120">🕑 2 uur</option>
   </select>
 
-  <input type="checkbox" id="heleDag" />
+  <label><input type="checkbox" id="heleDag"> Hele dag</label>
+  <button id="herkenButton">🔍 Herken gegevens</button>
+  <button id="voegToeButton">📅 Voeg toe aan agenda</button>
+
+  <div id="output"></div>
+  <div id="meerdereOutput"></div>
 
   <script src="script_tool.js"></script>
 </body>
