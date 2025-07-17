@@ -69,7 +69,63 @@ function opschonenTitel(tekst) {
 }
 
 // parseTextToEvent: herkent (een) dag en tijd in de tekst
+function typoCorrectieOverVoorKwartHalf(tekst) {
+  // Stap 1: Voeg spaties toe tussen getal en tijdwoord als ze aan elkaar geplakt zijn of ontbreken
+  tekst = tekst.replace(/(\d+)\s*([a-z]{2,8})\s*(\d+)/gi, (match, p1, p2, p3) => {
+    // Corrigeer typo in tijdwoord vóór spatieherkenning
+    const tijdwoorden = [
+      "over", "ovr", "oveer", "oevr", "ovre", "oevre", "ober", "ove", "ive", "obver", "iver",
+      "voor", "vor", "foor", "vooor", "vooe", "voer", "voof", "voot", "vopr", "v0or", "vorr", "vdor",
+      "kwart", "kwrat", "kwarrt", "kwartt", "kwartd", "quwart", "kwwart", "kwat", "kqart", "kwrat", "kwarrd", "kwakt", "kwaet",
+      "half", "hlf", "hafl", "hallf", "hslf", "halb", "halv", "hqlf", "halff", "hslv", "halc", "halg"
+    ];
+    if (tijdwoorden.includes(p2.toLowerCase())) {
+      return `${p1} ${p2} ${p3}`;
+    }
+    return match;
+  });
+  const typoMap = {
+    over: ["over", "ovr", "oveer", "oevr", "ovre", "oevre", "ober", "ove", "oveer", "iver", "obver", "iver"],
+    voor: ["voor", "vor", "foor", "vooor", "vooe", "voer", "voof", "voot", "vopr", "v0or", "vorr", "vdor"],
+    kwart: ["kwart", "kwrat", "kwarrt", "kwartt", "kwartd", "quwart", "kwwart", "kwat", "kqart", "kwrat", "kwarrd", "kwakt", "kwaet"],
+    half: ["half", "hlf", "hafl", "hallf", "hslf", "halb", "halv", "hqlf", "halff", "hslv", "halc", "halg"]
+  };
+  let t = tekst;
+  for (const [correct, typos] of Object.entries(typoMap)) {
+    for (const typo of typos) {
+      t = t.replace(new RegExp("\\b" + typo + "\\b", "gi"), correct);
+    }
+  }
+  return t;
+}
+
+function maandTypoCorrectie(tekst) {
+  const maandTypoMap = {
+    januari: ["januri", "januai", "janurai", "jnauari", "januarie", "janari", "janueri", "januair", "janurari"],
+    februari: ["feburari", "februai", "febrauri", "febuary", "februrai", "februarie", "ferbruari", "febraui", "febuari", "febrari"],
+    maart: ["mart", "maert", "maartt", "marrrt", "maat", "maaat", "maar", "maars", "maatr", "mraat"],
+    april: ["aprl", "appril", "arpil", "apirl", "aprill", "aprli", "aprril", "aprel", "aprik"],
+    mei: ["mi", "meei", "meii", "mey", "meie", "mii", "meiee", "mee"],
+    juni: ["jni", "juuni", "junni", "jnui", "juniie", "juno", "jui", "junu", "jnni"],
+    juli: ["julli", "juuli", "jly", "jli", "julliie", "juliie", "julie", "julii", "juil"],
+    augustus: ["augstus", "augusts", "agustus", "augustsu", "agusts", "augutus", "augusuts", "augst", "agustuss", "auggustus"],
+    september: ["septmber", "septemer", "septermber", "septembr", "septmbr", "setember", "septembrer", "septembe", "septber", "seotember"],
+    oktober: ["oktber", "ocotber", "okotber", "oktobr", "oktoer", "okober", "octber", "oktobber", "oktobeer", "otkober"],
+    november: ["novmber", "novembr", "novemer", "novmebr", "noveber", "novembe", "novembrer", "nvoember", "novebmer", "novemebr"],
+    december: ["decmber", "descember", "decembre", "desembre", "deecember", "deceber", "desmber", "decemebr", "decembber", "decembee"]
+  };
+  let t = tekst;
+  for (const [maand, typos] of Object.entries(maandTypoMap)) {
+    for (const typo of typos) {
+      t = t.replace(new RegExp("\\b" + typo + "\\b", "gi"), maand);
+    }
+  }
+  return t;
+}
+
 function parseTextToEvent(text, weekContext = null) {
+  text = typoCorrectieOverVoorKwartHalf(text);
+  text = maandTypoCorrectie(text);
   const origineleTekst = text.toLowerCase();
   let datum = null;
   let weeknr = null;
@@ -134,13 +190,31 @@ function parseTextToEvent(text, weekContext = null) {
   }
   let startH = null, startM = null;
   const tijdRegexes = [
+    // 5 over half 9
     { re: /(\w+)\s*over\s*half\s*(\w+)/gi, calc: (m, h) => [adjustTime(woordOfGetal(h) - 1), 30 + woordOfGetal(m)] },
+    // 5 voor half 9
     { re: /(\w+)\s*voor\s*half\s*(\w+)/gi, calc: (m, h) => [adjustTime(woordOfGetal(h) - 1), 30 - woordOfGetal(m)] },
+    // kwart over 9
     { re: /kwart over (\w+)/gi, calc: h => [adjustTime(woordOfGetal(h)), 15] },
+    // kwart voor 9
     { re: /kwart voor (\w+)/gi, calc: h => [adjustTime(woordOfGetal(h) - 1), 45] },
+    // half 9
     { re: /half (\w+)/gi, calc: h => [adjustTime(woordOfGetal(h) - 1), 30] },
+    // 5 over 9
+    { re: /(\d{1,2})\s*over\s*(\d{1,2})/gi, calc: (m, h) => [adjustTime(parseInt(h)), parseInt(m)] },
+    // 10 voor 8
+    { re: /(\d{1,2})\s*voor\s*(\d{1,2})/gi, calc: (m, h) => [adjustTime(parseInt(h) - 1), 60 - parseInt(m)] },
+    // kwart over 7 (cijfer)
+    { re: /kwart over (\d{1,2})/gi, calc: h => [adjustTime(parseInt(h)), 15] },
+    // kwart voor 6 (cijfer)
+    { re: /kwart voor (\d{1,2})/gi, calc: h => [adjustTime(parseInt(h) - 1), 45] },
+    // half 8 (cijfer)
+    { re: /half (\d{1,2})/gi, calc: h => [adjustTime(parseInt(h) - 1), 30] },
+    // 09:15
     { re: /(\d{1,2}):(\d{2})/gi, calc: (h, m) => [parseInt(h), parseInt(m)] },
+    // 9 uur, 9u
     { re: /(\d{1,2})\s*(uur|u)/gi, calc: h => [adjustTime(parseInt(h)), 0] },
+    // negen uur
     { re: /(\w+)\s*(uur|u)/gi, calc: h => [adjustTime(woordOfGetal(h)), 0] }
   ];
   for (let tijdRe of tijdRegexes) {
@@ -187,6 +261,7 @@ function parseTextToEvent(text, weekContext = null) {
 
 // Nieuwe functie: detecteert meerdere afspraken op aparte regels of met punten of dagwissel na komma
 function parseMeerdereAfsprakenInRegel(tekst) {
+  tekst = maandTypoCorrectie(tekst);
   // Split op regels, punten of op ', ' gevolgd door dagnaam
   const dagNamen = ["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
   const dagRegex = dagNamen.join("|");
@@ -359,12 +434,33 @@ document.addEventListener("DOMContentLoaded", () => {
   if (knop) {
     knop.addEventListener("click", parseEnToon);
   }
-  const addButton = document.getElementById("addEventButton");
-  if (addButton) {
-    addButton.addEventListener("click", addEvent);
+  const voegToeButton = document.getElementById("voegToeButton");
+  if (voegToeButton) {
+    voegToeButton.addEventListener("click", addEvent);
   }
 });
 
+
+// Check op conflicterende afspraken binnen 30 minuten
+async function checkConflictingEvents(start, end) {
+  // Haal events op binnen 30 minuten voor/na de nieuwe afspraak
+  const timeMin = new Date(start.getTime() - 30 * 60000).toISOString();
+  const timeMax = new Date(end.getTime() + 30 * 60000).toISOString();
+  const res = await gapi.client.calendar.events.list({
+    calendarId: 'primary',
+    timeMin,
+    timeMax,
+    singleEvents: true,
+    orderBy: 'startTime'
+  });
+  // Filter events die exact overlappen met de nieuwe afspraak
+  return res.result.items.filter(ev => {
+    const evStart = new Date(ev.start.dateTime || ev.start.date);
+    const evEnd = new Date(ev.end.dateTime || ev.end.date);
+    // Overlap als ev eindigt na start en begint voor end
+    return evEnd > start && evStart < end;
+  });
+}
 
 // Voeg afspraken toe aan Google Agenda
 async function addEvent() {
@@ -440,6 +536,26 @@ async function addEvent() {
         colorId: (kleur === 'random' ? (function() { const kleuren = ["1","2","3","4","5","6","7","8","9","10","11"]; return kleuren[Math.floor(Math.random()*kleuren.length)]; })() : kleur)
       };
     }
+    // Conflict check alleen bij niet-hele-dag events
+    if (!heleDag) {
+      const start = new Date(event.start.dateTime);
+      const end = new Date(event.end.dateTime);
+      const conflicts = await checkConflictingEvents(start, end);
+      if (conflicts.length > 0) {
+        let conflictDetails = conflicts.map(ev => {
+          let tijd = '';
+          if (ev.start.dateTime) {
+            const d = new Date(ev.start.dateTime);
+            tijd = d.toLocaleString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+          } else if (ev.start.date) {
+            tijd = 'hele dag';
+          }
+          return `- ${ev.summary || '(geen titel)'} (${tijd})`;
+        }).join('\n');
+        const bevestig = confirm(`Er is al een afspraak binnen 30 minuten:\n${conflictDetails}\n\nWeet je zeker dat je deze wilt toevoegen?`);
+        if (!bevestig) continue;
+      }
+    }
     try {
       await gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
       toegevoegd++;
@@ -449,3 +565,35 @@ async function addEvent() {
   }
   alert(`${toegevoegd} afspraak/afspraken toegevoegd aan je Google Agenda!`);
 }
+
+// --- TypoCorrectie testcases ---
+(function testTypoCorrectieOverVoorKwartHalf() {
+  const testCases = [
+    // over
+    ["ovr", "over"], ["oveer", "over"], ["oevr", "over"], ["ovre", "over"], ["oevre", "over"], ["ober", "over"], ["ove", "over"], ["iver", "over"], ["obver", "over"],
+    // voor
+    ["vor", "voor"], ["foor", "voor"], ["vooor", "voor"], ["vooe", "voor"], ["voer", "voor"], ["voof", "voor"], ["voot", "voor"], ["vopr", "voor"], ["v0or", "voor"], ["vorr", "voor"], ["vdor", "voor"],
+    // kwart
+    ["kwrat", "kwart"], ["kwarrt", "kwart"], ["kwartt", "kwart"], ["kwartd", "kwart"], ["quwart", "kwart"], ["kwwart", "kwart"], ["kwat", "kwart"], ["kqart", "kwart"], ["kwarrd", "kwart"], ["kwakt", "kwart"], ["kwaet", "kwart"],
+    // half
+    ["hlf", "half"], ["hafl", "half"], ["hallf", "half"], ["hslf", "half"], ["halb", "half"], ["halv", "half"], ["hqlf", "half"], ["halff", "half"], ["hslv", "half"], ["halc", "half"], ["halg", "half"]
+  ];
+  let allPassed = true;
+  for (const [input, expected] of testCases) {
+    const result = typoCorrectieOverVoorKwartHalf(input);
+    if (result !== expected) {
+      console.error(`❌ Fout: '${input}' werd '${result}' i.p.v. '${expected}'`);
+      allPassed = false;
+    }
+  }
+  // Test zin met meerdere typos
+  const multiResult = typoCorrectieOverVoorKwartHalf('ovr vor kwrat hlf');
+  if (multiResult !== 'over voor kwart half') {
+    console.error(`❌ Fout: 'ovr vor kwrat hlf' werd '${multiResult}' i.p.v. 'over voor kwart half'`);
+    allPassed = false;
+  }
+  if (allPassed) {
+    console.log('✅ Alle typoCorrectieOverVoorKwartHalf tests geslaagd!');
+  }
+})();
+
