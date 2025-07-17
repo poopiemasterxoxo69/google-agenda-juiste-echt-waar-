@@ -185,41 +185,44 @@ function parseTextToEvent(text, weekContext = null) {
   };
 }
 
-// Nieuwe functie: detecteert meerdere afspraken op aparte regels of met punten
+// Nieuwe functie: detecteert meerdere afspraken op aparte regels of met punten of dagwissel na komma
 function parseMeerdereAfsprakenInRegel(tekst) {
+  // Split op regels, punten of op ', ' gevolgd door dagnaam
+  const dagNamen = ["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
+  const dagRegex = dagNamen.join("|");
+  // Split op: enter, punt, of komma+spatie gevolgd door dagnaam
+  const blokken = tekst.split(new RegExp(`[\r\n\.]+|, (?=${dagRegex})`, 'i')).map(r => r.trim()).filter(r => r.length > 0);
+
   // Zoek weeknummer context
   let weekMatch = tekst.match(/week\s*(\d{1,2})/i);
   let weeknr = weekMatch ? parseInt(weekMatch[1]) : null;
   let weekContext = weeknr ? weeknr : null;
 
-  // Bepaal hoofd-titel uit eerste regel vóór dagnaam
+  // Bepaal hoofd-titel uit eerste blok vóór dagnaam
   let hoofdTitel = null;
-  let eersteRegel = tekst.split(/[\r\n\.]+/).find(r => /\b(zondag|maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag)\b/i.test(r));
-  if (eersteRegel) {
-    let dagMatch = eersteRegel.match(/^(.*?)\b(zondag|maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag)\b/i);
+  let eersteBlok = blokken.find(r => new RegExp(`\\b(${dagRegex})\\b`, 'i').test(r));
+  if (eersteBlok) {
+    let dagMatch = eersteBlok.match(new RegExp(`^(.*?)\\b(${dagRegex})\\b`, 'i'));
     if (dagMatch && dagMatch[1].trim().length > 0) {
       hoofdTitel = opschonenTitel(dagMatch[1].trim());
     }
   }
 
-  // Split regels, maar behoud weekcontext
-  const regels = tekst.split(/[\r\n\.]+/).map(r => r.trim()).filter(r => r.length > 0);
   let afspraken = [];
   let laatsteDag = null;
-  for (let regel of regels) {
-    // Vind de eerste dagnaam in de regel
-    let dagMatch = regel.match(/\b(zondag|maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag)\b/i);
+  for (let blok of blokken) {
+    // Vind de eerste dagnaam in het blok
+    let dagMatch = blok.match(new RegExp(`\\b(${dagRegex})\\b`, 'i'));
     if (dagMatch) {
       laatsteDag = dagMatch[1].toLowerCase();
     }
-    // Pak ook regels zonder dag als ze na een dagregel komen (voor blokken als "vrijdag 12:30 14:00 examen")
     let dagNaam = laatsteDag;
     // Titel vóór de dagnaam (eventueel)
-    let titleBeforeDay = dagMatch ? regel.substring(0, dagMatch.index).trim() : "";
+    let titleBeforeDay = dagMatch ? blok.substring(0, dagMatch.index).trim() : "";
     let baseTitle = titleBeforeDay ? opschonenTitel(titleBeforeDay) : hoofdTitel || "";
     // Tekst ná de dagnaam
-    let naDag = dagMatch ? regel.substring(dagMatch.index + dagNaam.length).trim() : regel;
-    // Herken ook "tijd: XX:XX" en "datum: X maand tijd: XX:XX"
+    let naDag = dagMatch ? blok.substring(dagMatch.index + dagNaam.length).trim() : blok;
+    // Herken "tijd: XX:XX" en "datum: X maand tijd: XX:XX"
     const tijdRegex = /(\d{1,2}[:.]\d{2})/g;
     let tijdLabelRegex = /tijd[:\s]*([0-9]{1,2}[:.][0-9]{2})/gi;
     let tijdLabelMatches = [];
@@ -248,7 +251,7 @@ function parseMeerdereAfsprakenInRegel(tekst) {
             ? afspraakTitel + " – " + extraTitel
             : extraTitel;
         }
-        // Voeg 'Examen' alleen toe als extraTitel exact 'Examen' is, niet aan alle afspraken in de regel
+        // Voeg 'Examen' alleen toe als extraTitel exact 'Examen' is, niet aan alle afspraken in het blok
         if (
           extraTitel &&
           extraTitel.toLowerCase() === "examen" &&
@@ -384,19 +387,11 @@ async function addEvent() {
       };
     }
     try {
-      const response = await gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
-      if (response && response.result && response.result.id) {
-        toegevoegd++;
-      } else {
-        throw new Error('Event niet toegevoegd.');
-      }
+      await gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
+      toegevoegd++;
     } catch (e) {
       console.error("Fout bij toevoegen event:", e);
-      alert("Fout bij toevoegen van event: " + (e.message || e));
-      return;
     }
   }
-  if (toegevoegd > 0) {
-    alert(`${toegevoegd} afspraak/afspraken succesvol toegevoegd aan je Google Agenda!`);
-  }
+  alert(`${toegevoegd} afspraak/afspraken toegevoegd aan je Google Agenda!`);
 }
