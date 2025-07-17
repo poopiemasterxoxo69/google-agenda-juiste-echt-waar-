@@ -337,41 +337,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// Google Auth integratie
-let tokenClient;
-let accessToken = null;
-
-function gapiLoaded() {
-  gapi.load('client', initializeGapiClient);
-}
-
-async function initializeGapiClient() {
-  await gapi.client.init({
-    apiKey: '',
-    discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
-  });
-}
-
-window.onload = () => {
-  if (typeof google !== "undefined") {
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
-      scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events',
-      callback: (tokenResponse) => {
-        accessToken = tokenResponse.access_token;
-        document.getElementById("status").innerText = "Ingelogd ✔";
-      },
-    });
-  }
-};
-
-function handleAuthClick() {
-  if (tokenClient) {
-    tokenClient.requestAccessToken();
-  } else {
-    alert("Google auth is nog niet geladen.");
-  }
-}
 
 // Voeg afspraken toe aan Google Agenda
 async function addEvent() {

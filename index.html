@@ -55,6 +55,7 @@
      data-auto_prompt="false">
   </div>
   <div class="g_id_signin" data-type="standard"></div>
+  <button onclick="handleAuthClick()">Log in met Google</button>
   <p id="status">Niet ingelogd</p>
 
   <textarea id="inputText" rows="4" placeholder="Bijv: fysio maandag half drie of 'kapper 5 juli 14:00'"></textarea>
@@ -91,6 +92,44 @@
   <div id="output"></div>
   <div id="meerdereOutput"></div>
 
+  <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    let tokenClient;
+    let accessToken = null;
+
+    function gapiLoaded() {
+      gapi.load('client', initializeGapiClient);
+    }
+
+    async function initializeGapiClient() {
+      await gapi.client.init({
+        apiKey: '',
+        discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
+      });
+    }
+
+    window.onload = () => {
+      if (typeof google !== "undefined") {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
+          scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events',
+          callback: (tokenResponse) => {
+            accessToken = tokenResponse.access_token;
+            document.getElementById("status").innerText = "Ingelogd ✔";
+          },
+        });
+      }
+    };
+
+    function handleAuthClick() {
+      if (tokenClient) {
+        tokenClient.requestAccessToken();
+      } else {
+        alert("Google auth is nog niet geladen.");
+      }
+    }
+  </script>
   <script src="script_tool.js"></script>
 </body>
 </html>
