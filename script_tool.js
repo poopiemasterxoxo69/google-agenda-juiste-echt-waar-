@@ -521,7 +521,16 @@ async function addEvent() {
         summary: titelopschoner(afspraak.titel),
         start: { date: startDate },
         end: { date: endDate },
-        colorId: (kleur === 'random' ? (function() { const kleuren = ["1","2","3","4","5","6","7","8","9","10","11"]; return kleuren[Math.floor(Math.random()*kleuren.length)]; })() : kleur)
+        colorId: (kleur === 'random' ? (function() { const kleuren = ["1","2","3","4","5","6","7","8","9","10","11"]; return kleuren[Math.floor(Math.random()*kleuren.length)]; })() : kleur),
+        reminders: {
+          useDefault: false,
+          overrides: [
+            { method: 'popup', minutes: 30 },
+            { method: 'popup', minutes: 60 * 24 },
+            { method: 'popup', minutes: 2 * 60 * 24 },
+            { method: 'popup', minutes: 10 }
+          ]
+        }
       };
     } else {
       // Event met tijd
@@ -533,7 +542,16 @@ async function addEvent() {
         summary: titelopschoner(afspraak.titel),
         start: { dateTime: start.toISOString(), timeZone: 'Europe/Amsterdam' },
         end: { dateTime: end.toISOString(), timeZone: 'Europe/Amsterdam' },
-        colorId: (kleur === 'random' ? (function() { const kleuren = ["1","2","3","4","5","6","7","8","9","10","11"]; return kleuren[Math.floor(Math.random()*kleuren.length)]; })() : kleur)
+        colorId: (kleur === 'random' ? (function() { const kleuren = ["1","2","3","4","5","6","7","8","9","10","11"]; return kleuren[Math.floor(Math.random()*kleuren.length)]; })() : kleur),
+        reminders: {
+          useDefault: false,
+          overrides: [
+            { method: 'popup', minutes: 30 },
+            { method: 'popup', minutes: 60 * 24 },
+            { method: 'popup', minutes: 2 * 60 * 24 },
+            { method: 'popup', minutes: 10 }
+          ]
+        }
       };
     }
     // Conflict check alleen bij niet-hele-dag events
