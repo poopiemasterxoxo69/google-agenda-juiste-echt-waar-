@@ -83,14 +83,40 @@ function patchTokenClientCallback() {
   window.tokenClient._profilePatched = true;
 }
 
-// Patch direct als tokenClient al bestaat
-if (window.tokenClient) patchTokenClientCallback();
-// Patch zodra gapiLoaded wordt aangeroepen (tokenClient kan dan bestaan)
-const origGapiLoaded = window.gapiLoaded;
-window.gapiLoaded = function() {
+function initGoogleLogin() {
+  window.tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
+    scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events',
+    callback: (tokenResponse) => {
+      window.accessToken = tokenResponse.access_token;
+      document.getElementById("status").innerText = "Ingelogd ✔";
+    }
+  });
   patchTokenClientCallback();
-  if (typeof origGapiLoaded === 'function') origGapiLoaded();
-};
+}
+
+// Start login/init als DOM klaar is en Google geladen is
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Wacht tot google.accounts geladen is
+  function wachtOpGoogle(cb, tries = 0) {
+    if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+      cb();
+    } else if (tries < 30) {
+      setTimeout(() => wachtOpGoogle(cb, tries + 1), 100);
+    } else {
+      console.error('[DEBUG] Google accounts niet gevonden');
+    }
+  }
+  wachtOpGoogle(initGoogleLogin);
+
+  // Voeg listeners toe voor knoppen
+  const herkenBtn = document.getElementById("herkenButton");
+  if (herkenBtn) herkenBtn.addEventListener("click", parseEnToon);
+  const voegToeBtn = document.getElementById("voegToeButton");
+  if (voegToeBtn) voegToeBtn.addEventListener("click", addEvent);
+});
+
 
 // Hulpfuncties blijven ongewijzigd:
 function todayWithoutTime() {
