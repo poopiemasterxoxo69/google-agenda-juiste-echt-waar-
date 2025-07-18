@@ -776,8 +776,8 @@ async function addEvent() {
     // Google Calendar colorId moet een string zijn van 1 t/m 11 (geen undefined/null)
     let kleurEvent = undefined;
     if (afspraak.kleur === 'random' || (!afspraak.kleur && kleur === 'random')) {
-      // Kies nu pas een random kleur
-      const kleuren = ['1','2','3','4','5','6','7','8','9','10','11'];
+      // Kies nu pas een random kleur uit ALLE opties van genereerKleurOpties
+      const kleuren = ['11','6','5','10','2','9','7','3','4','1','8']; // match dropdown volgorde
       kleurEvent = kleuren[Math.floor(Math.random()*kleuren.length)];
     } else if (afspraak.kleur && afspraak.kleur !== 'random') {
       kleurEvent = String(afspraak.kleur);
@@ -789,15 +789,20 @@ async function addEvent() {
     let duurEvent = afspraak.duur ? parseInt(afspraak.duur) : (duur || 60);
     let datum = afspraak.datum instanceof Date ? afspraak.datum : new Date(afspraak.datum);
     let tijd = afspraak.tijd;
-    if (tijd && tijd.match(/^\d{1,2}:\d{2}$/)) {
-      // Tijd aanwezig, dus geen hele dag
+    // Gebruik altijd heleDag checkbox om te bepalen of het een all-day event is
+    if (heleDag) {
+      start = { date: datum.toISOString().slice(0, 10) };
+      let endDate = new Date(datum);
+      endDate.setDate(endDate.getDate() + 1);
+      end = { date: endDate.toISOString().slice(0, 10) };
+    } else if (tijd && tijd.match(/^\d{1,2}:\d{2}$/)) {
       let [hh, mm] = tijd.split(':').map(Number);
       datum.setHours(hh, mm, 0, 0);
       start = { dateTime: datum.toISOString(), timeZone: 'Europe/Amsterdam' };
       let eind = new Date(datum.getTime() + duurEvent * 60000);
       end = { dateTime: eind.toISOString(), timeZone: 'Europe/Amsterdam' };
     } else {
-      // Geen tijd: hele dag
+      // fallback: geen tijd en niet hele dag, behandel als hele dag
       start = { date: datum.toISOString().slice(0, 10) };
       let endDate = new Date(datum);
       endDate.setDate(endDate.getDate() + 1);
