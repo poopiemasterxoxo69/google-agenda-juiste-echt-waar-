@@ -764,23 +764,29 @@ async function addEvent() {
   let details = '';
   for (let afspraak of afspraken) {
     let start, end;
+    let kleurEvent = afspraak.kleur && afspraak.kleur !== 'random' ? afspraak.kleur : (kleur === 'random' ? undefined : kleur);
+    let duurEvent = afspraak.duur ? parseInt(afspraak.duur) : (duur || 60);
     let datum = afspraak.datum instanceof Date ? afspraak.datum : new Date(afspraak.datum);
-    if (heleDag) {
+    let tijd = afspraak.tijd;
+    if (tijd && tijd.match(/^\d{1,2}:\d{2}$/)) {
+      // Tijd aanwezig, dus geen hele dag
+      let [hh, mm] = tijd.split(':').map(Number);
+      datum.setHours(hh, mm, 0, 0);
+      start = { dateTime: datum.toISOString(), timeZone: 'Europe/Amsterdam' };
+      let eind = new Date(datum.getTime() + duurEvent * 60000);
+      end = { dateTime: eind.toISOString(), timeZone: 'Europe/Amsterdam' };
+    } else {
+      // Geen tijd: hele dag
       start = { date: datum.toISOString().slice(0, 10) };
-      // End moet de volgende dag zijn voor hele dag events
       let endDate = new Date(datum);
       endDate.setDate(endDate.getDate() + 1);
       end = { date: endDate.toISOString().slice(0, 10) };
-    } else {
-      start = { dateTime: datum.toISOString(), timeZone: 'Europe/Amsterdam' };
-      let eind = new Date(datum.getTime() + (duur || 60) * 60000);
-      end = { dateTime: eind.toISOString(), timeZone: 'Europe/Amsterdam' };
     }
     let event = {
       summary: afspraak.titel,
       start,
       end,
-      colorId: kleur === 'random' ? undefined : kleur
+      colorId: kleurEvent
     };
     try {
       await gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
