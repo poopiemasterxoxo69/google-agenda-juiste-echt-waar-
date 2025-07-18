@@ -144,11 +144,80 @@ document.addEventListener('DOMContentLoaded', function() {
   const voegToeBtn = document.getElementById("voegToeButton");
   if (voegToeBtn) voegToeBtn.addEventListener("click", addEvent);
 
-  // Bottom nav bar
+  // Bottom nav bar functionaliteit
   const navAfspraak = document.getElementById('nav-afspraak');
   const navAgenda = document.getElementById('nav-agenda');
-  navAfspraak.style.background = 'lightblue';
-  navAgenda.addEventListener('click', () => alert('Agenda'));
+  const agendaView = document.getElementById('agendaView');
+  const mainContent = document.querySelector('body > :not(#agendaView):not(nav):not(#bottom-nav)');
+
+  function showAfspraakMaken() {
+    if (agendaView) agendaView.style.display = 'none';
+    // Toon alle hoofd-content behalve agendaView en nav
+    document.querySelectorAll('body > *:not(#agendaView):not(nav):not(#bottom-nav)').forEach(el => {
+      if (el.id !== 'bottom-nav') el.style.display = '';
+    });
+    if (navAfspraak) navAfspraak.style.color = '#27ae60';
+    if (navAgenda) navAgenda.style.color = '#888';
+  }
+  function showAgenda() {
+    if (agendaView) agendaView.style.display = '';
+    // Verberg alle hoofd-content behalve agendaView en nav
+    document.querySelectorAll('body > *:not(#agendaView):not(nav):not(#bottom-nav)').forEach(el => {
+      if (el.id !== 'bottom-nav') el.style.display = 'none';
+    });
+    if (navAfspraak) navAfspraak.style.color = '#888';
+    if (navAgenda) navAgenda.style.color = '#27ae60';
+    // Echte afspraken ophalen
+    const weekAgendaList = document.getElementById('weekAgendaList');
+    if (!window.accessToken) {
+      if (weekAgendaList) weekAgendaList.innerHTML = '<div style="color:red">Log eerst in om je agenda te zien.</div>';
+      return;
+    }
+    if (weekAgendaList) weekAgendaList.innerHTML = 'Afspraken laden...';
+    // Bepaal begin en eind van de week (maandag-zondag)
+    const now = new Date();
+    const day = now.getDay(); // 0=zo, 1=ma
+    const diffToMonday = (day === 0 ? -6 : 1) - day;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + diffToMonday);
+    monday.setHours(0,0,0,0);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23,59,59,999);
+    // Calendar API call
+    gapi.client.calendar.events.list({
+      calendarId: 'primary',
+      timeMin: monday.toISOString(),
+      timeMax: sunday.toISOString(),
+      showDeleted: false,
+      singleEvents: true,
+      orderBy: 'startTime'
+    }).then(function(response) {
+      const events = response.result.items;
+      if (!events || events.length === 0) {
+        weekAgendaList.innerHTML = '<div>Geen afspraken deze week!</div>';
+        return;
+      }
+      // Format events
+      let html = '<ul style="list-style:none;padding:0;">';
+      for (const event of events) {
+        const start = event.start.dateTime || event.start.date;
+        const startDate = new Date(start);
+        const days = ['Zo','Ma','Di','Wo','Do','Vr','Za'];
+        const dag = days[startDate.getDay()];
+        const tijd = event.start.dateTime ? startDate.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}) : 'Hele dag';
+        html += `<li style='margin-bottom:8px;'><b>${dag}</b> ${tijd} - ${event.summary || '(geen titel)'}</li>`;
+      }
+      html += '</ul>';
+      weekAgendaList.innerHTML = html;
+    }, function(err) {
+      weekAgendaList.innerHTML = '<div style="color:red">Kan agenda niet laden: ' + (err.result && err.result.error && err.result.error.message ? err.result.error.message : 'Onbekende fout') + '</div>';
+    });
+  }
+  if (navAfspraak) navAfspraak.addEventListener('click', showAfspraakMaken);
+  if (navAgenda) navAgenda.addEventListener('click', showAgenda);
+  // Start met afspraak-maken scherm
+  showAfspraakMaken();
 });
 
 // Hulpfuncties blijven ongewijzigd:
