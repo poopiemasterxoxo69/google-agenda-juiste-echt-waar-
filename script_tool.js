@@ -812,7 +812,16 @@ async function addEvent() {
       summary: afspraak.titel,
       start,
       end,
-      colorId: kleurEvent
+      colorId: kleurEvent,
+      reminders: {
+        useDefault: false,
+        overrides: [
+          { method: 'popup', minutes: 10 },
+          { method: 'popup', minutes: 30 },
+          { method: 'popup', minutes: 24 * 60 }, // 1 dag
+          { method: 'popup', minutes: 2 * 24 * 60 } // 2 dagen
+        ]
+      }
     };
     // Controleer op conflicten vóór toevoegen
     let conflict = await checkConflictingEvents(
