@@ -66,7 +66,7 @@
 </head>
 <body>
   <div id="profileBox" style="position:fixed;top:20px;right:32px;z-index:1000;"></div>
-  <h1>Agenda Tool21</h1>
+  <h1>Agenda Tool22</h1>
   <div id="g_id_onload"
      data-client_id="YOUR_CLIENT_ID"
      data-callback="handleCredentialResponse"
@@ -161,24 +161,7 @@
       });
     }
 
-    window.onload = () => {
-      if (typeof google !== "undefined") {
-        tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
-          scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events',
-          callback: (tokenResponse) => {
-            accessToken = tokenResponse.access_token;
-            document.getElementById("status").innerText = "Ingelogd ✔";
-          },
-        });
-      }
 
-      // Voeg event listener toe aan de knop
-      const voegToeBtn = document.getElementById('voegToeButton');
-      if (voegToeBtn) {
-        voegToeBtn.addEventListener('click', addEvent);
-      }
-    };
 
     function handleAuthClick() {
       if (tokenClient) {
@@ -301,7 +284,19 @@
   </script>
   <script src="script_tool.js"></script>
   <!-- Zwevende + knop -->
-  <button id="manual-plus-btn" title="Nieuwe afspraak" style="position:fixed;right:32px;bottom:32px;width:56px;height:56px;border-radius:50%;background:#27ae60;color:#fff;font-size:2.2em;box-shadow:0 2px 8px #0003;z-index:900;border:none;cursor:pointer;">+</button>
+  <button id="manual-plus-btn" title="Nieuwe afspraak" style="position:fixed;right:32px;bottom:72px;width:56px;height:56px;border-radius:50%;background:#27ae60;color:#fff;font-size:2.2em;box-shadow:0 2px 8px #0003;z-index:900;border:none;cursor:pointer;">+</button>
+
+  <!-- Bottom navigation bar -->
+  <nav id="bottom-nav" style="position:fixed;bottom:0;left:0;width:100vw;height:60px;background:#fff;box-shadow:0 -2px 8px #0002;display:flex;justify-content:space-around;align-items:center;z-index:1001;">
+    <button id="nav-afspraak" style="background:none;border:none;outline:none;font-size:1.1em;display:flex;flex-direction:column;align-items:center;color:#27ae60;flex:1;">
+      <span style="font-size:1.7em;">📅</span>
+      Afspraak maken
+    </button>
+    <button id="nav-agenda" style="background:none;border:none;outline:none;font-size:1.1em;display:flex;flex-direction:column;align-items:center;color:#888;flex:1;">
+      <span style="font-size:1.7em;">🗓️</span>
+      Agenda
+    </button>
+  </nav>
 
 </body>
 </html>

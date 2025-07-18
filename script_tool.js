@@ -143,8 +143,13 @@ document.addEventListener('DOMContentLoaded', function() {
   if (herkenBtn) herkenBtn.addEventListener("click", parseEnToon);
   const voegToeBtn = document.getElementById("voegToeButton");
   if (voegToeBtn) voegToeBtn.addEventListener("click", addEvent);
-});
 
+  // Bottom nav bar
+  const navAfspraak = document.getElementById('nav-afspraak');
+  const navAgenda = document.getElementById('nav-agenda');
+  navAfspraak.style.background = 'lightblue';
+  navAgenda.addEventListener('click', () => alert('Agenda'));
+});
 
 // Hulpfuncties blijven ongewijzigd:
 function todayWithoutTime() {
