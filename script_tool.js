@@ -90,6 +90,8 @@ function initGoogleLogin() {
     callback: (tokenResponse) => {
       window.accessToken = tokenResponse.access_token;
       document.getElementById("status").innerText = "Ingelogd ✔";
+      var loginBtn = document.getElementById('loginButton');
+      if (loginBtn) loginBtn.style.display = 'none';
     }
   });
   patchTokenClientCallback();
