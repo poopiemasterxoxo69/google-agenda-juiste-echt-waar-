@@ -65,13 +65,14 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
-  <h1>Agenda Tool11</h1>
+  <h1>Agenda Tool</h1>
   <div id="g_id_onload"
      data-client_id="YOUR_CLIENT_ID"
      data-callback="handleCredentialResponse"
      data-auto_prompt="false">
   </div>
-  <button onclick="handleAuthClick()">Log in met Google</button>
+  <button id="loginButton" onclick="handleAuthClick()">Log in met Google</button>
+  <label style="margin-left:12px;font-weight:normal;"><input type="checkbox" id="onthoudMij"> Onthoud mij (blijf ingelogd)</label>
   <p id="status">Niet ingelogd</p>
 
   <textarea id="inputText" rows="4" placeholder="Bijv: fysio maandag half drie of 'kapper 5 juli 14:00'"></textarea>
