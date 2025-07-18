@@ -240,7 +240,8 @@ function buildAgendaGrid() {
         cel.textContent = (uur<10?'0':'')+uur+':00';
         cel.style.cssText = 'color:#666;font-size:12px;display:flex;align-items:center;justify-content:center;border-right:1px solid #333;background:#181818;';
       } else {
-        cel.style.cssText = 'border-right:'+(dag<7?'1px solid #444;':'none')+'border-bottom:1px solid #333;position:relative;background:#1a1a1a;';
+        // Altijd verticale lijn, ook bij zondag
+        cel.style.cssText = 'border-right:1px solid #444;border-bottom:1px solid #333;position:relative;background:#1a1a1a;';
         cel.className = 'agenda-cel';
         cel.dataset.dag = dag-1;
         cel.dataset.uur = uur;
@@ -268,6 +269,20 @@ function buildAgendaGrid() {
 
 function vulAfsprakenInGrid(agenda, monday) {
   if (!window.accessToken) return;
+  // Mapping van Google colorId naar hex
+  const colorMap = {
+    '1': '#a4bdfc', // blauw
+    '2': '#7ae7bf', // turquoise
+    '3': '#dbadff', // paars
+    '4': '#ff887c', // roze
+    '5': '#fbd75b', // geel
+    '6': '#ffb878', // oranje
+    '7': '#46d6db', // lichtblauw
+    '8': '#e1e1e1', // grijs
+    '9': '#5484ed', // donkerblauw
+    '10': '#51b749', // donkergroen
+    '11': '#dc2127'  // rood
+  };
   // Ophalen afspraken voor deze week
   const start = new Date(monday);
   const eind = new Date(monday); eind.setDate(start.getDate()+6); eind.setHours(23,59,59,999);
@@ -282,22 +297,46 @@ function vulAfsprakenInGrid(agenda, monday) {
     const events = response.result.items;
     if (!events || events.length === 0) return;
     for (const event of events) {
-      const start = event.start.dateTime || event.start.date;
-      const end = event.end.dateTime || event.end.date;
-      const startDate = new Date(start);
-      const endDate = new Date(end);
+      if (!event.start.dateTime || !event.end.dateTime) continue; // alleen afspraken met tijd
+      const startDate = new Date(event.start.dateTime);
+      const endDate = new Date(event.end.dateTime);
       const dagIndex = (startDate.getDay()+6)%7; // Ma=0, Zo=6
-      const uur = startDate.getHours();
-      // Alleen afspraken met tijd (geen hele dag)
-      if (event.start.dateTime) {
-        const cell = agenda.querySelector(`.agenda-cel[data-dag='${dagIndex}'][data-uur='${uur}']`);
-        if (cell) {
-          const taak = document.createElement('div');
-          taak.className = 'taak';
-          taak.style.cssText = 'position:absolute;left:6px;right:6px;top:6px;background:#4285f4;color:#fff;border-radius:8px;padding:4px 8px;font-size:12px;z-index:2;box-shadow:0 2px 6px #0003;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-          taak.textContent = event.summary || '(geen titel)';
-          cell.appendChild(taak);
-        }
+      const startHour = startDate.getHours();
+      const endHour = endDate.getHours();
+      const startMin = startDate.getMinutes();
+      const endMin = endDate.getMinutes();
+      // Bepaal cel en positie binnen het uur
+      const cell = agenda.querySelector(`.agenda-cel[data-dag='${dagIndex}'][data-uur='${startHour}']`);
+      if (cell) {
+        const taak = document.createElement('div');
+        taak.className = 'taak';
+        // Duur in minuten
+        let duration = (endDate - startDate) / 60000;
+        if (duration < 15) duration = 15; // minimale hoogte
+        // Hoogte = duur (in px), max 60*uren
+        let height = Math.max(18, duration);
+        // Als de afspraak over meerdere uren loopt, clamp tot onderkant grid
+        if (startHour < 23) height = Math.min(height, (60 - startMin));
+        taak.style.position = 'absolute';
+        taak.style.left = '6px';
+        taak.style.right = '6px';
+        taak.style.top = (6 + (startMin/60)*60) + 'px';
+        taak.style.height = (duration/60*60) + 'px';
+        // Kleur uit Google Agenda
+        let kleur = '#4285f4';
+        if (event.colorId && colorMap[event.colorId]) kleur = colorMap[event.colorId];
+        taak.style.background = kleur;
+        taak.style.color = '#fff';
+        taak.style.borderRadius = '8px';
+        taak.style.padding = '4px 8px';
+        taak.style.fontSize = '12px';
+        taak.style.zIndex = 2;
+        taak.style.boxShadow = '0 2px 6px #0003';
+        taak.style.whiteSpace = 'nowrap';
+        taak.style.overflow = 'hidden';
+        taak.style.textOverflow = 'ellipsis';
+        taak.textContent = event.summary || '(geen titel)';
+        cell.appendChild(taak);
       }
     }
   });
