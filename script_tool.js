@@ -144,6 +144,18 @@ document.addEventListener('DOMContentLoaded', function() {
   const voegToeBtn = document.getElementById("voegToeButton");
   if (voegToeBtn) voegToeBtn.addEventListener("click", addEvent);
 
+  // Login-knop event listener
+  const loginBtn = document.getElementById('loginButton');
+  if (loginBtn) {
+    loginBtn.addEventListener('click', function() {
+      if (window.tokenClient) {
+        window.tokenClient.requestAccessToken();
+      } else {
+        alert('Google auth is nog niet geladen.');
+      }
+    });
+  }
+
   // Bottom nav bar functionaliteit
   const navAfspraak = document.getElementById('nav-afspraak');
   const navAgenda = document.getElementById('nav-agenda');
