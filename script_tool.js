@@ -771,7 +771,15 @@ async function addEvent() {
   let details = '';
   for (let afspraak of afspraken) {
     let start, end;
-    let kleurEvent = afspraak.kleur && afspraak.kleur !== 'random' ? afspraak.kleur : (kleur === 'random' ? undefined : kleur);
+    // Google Calendar colorId moet een string zijn van 1 t/m 11 (geen undefined/null)
+    let kleurEvent = undefined;
+    if (afspraak.kleur && afspraak.kleur !== 'random') {
+      kleurEvent = String(afspraak.kleur);
+    } else if (kleur && kleur !== 'random') {
+      kleurEvent = String(kleur);
+    } else {
+      kleurEvent = '1'; // fallback: roze
+    }
     let duurEvent = afspraak.duur ? parseInt(afspraak.duur) : (duur || 60);
     let datum = afspraak.datum instanceof Date ? afspraak.datum : new Date(afspraak.datum);
     let tijd = afspraak.tijd;
