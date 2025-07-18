@@ -795,6 +795,17 @@ async function addEvent() {
       end,
       colorId: kleurEvent
     };
+    // Controleer op conflicten vóór toevoegen
+    let conflict = await checkConflictingEvents(
+      tijd && tijd.match(/^\d{1,2}:\d{2}$/) ? datum : new Date(datum.toISOString().slice(0,10) + 'T00:00:00'),
+      tijd && tijd.match(/^\d{1,2}:\d{2}$/) ? new Date(datum.getTime() + duurEvent * 60000) : new Date(datum.toISOString().slice(0,10) + 'T23:59:59')
+    );
+    if (conflict) {
+      if (!confirm(`Let op: er is al een afspraak rond deze tijd (${afspraak.titel} - ${afspraak.tijd || start.date}). Toch toevoegen?`)) {
+        details += `\nNiet toegevoegd (conflict): ${event.summary}`;
+        continue;
+      }
+    }
     try {
       await gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
       toegevoegd++;
