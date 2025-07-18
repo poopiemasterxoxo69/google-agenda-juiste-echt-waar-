@@ -83,6 +83,14 @@ function patchTokenClientCallback() {
   window.tokenClient._profilePatched = true;
 }
 
+// Variabele om zichtbaarheid login-knop te beheren
+window.loginButtonVisible = true;
+
+function updateLoginButtonVisibility() {
+  var loginBtn = document.getElementById('loginButton');
+  if (loginBtn) loginBtn.style.display = window.loginButtonVisible ? '' : 'none';
+}
+
 function initGoogleLogin() {
   window.tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
@@ -90,8 +98,8 @@ function initGoogleLogin() {
     callback: (tokenResponse) => {
       window.accessToken = tokenResponse.access_token;
       document.getElementById("status").innerText = "Ingelogd ✔";
-      var loginBtn = document.getElementById('loginButton');
-      if (loginBtn) loginBtn.style.display = 'none';
+      window.loginButtonVisible = false;
+      updateLoginButtonVisibility();
     }
   });
   patchTokenClientCallback();
@@ -111,6 +119,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   wachtOpGoogle(initGoogleLogin);
+
+  // Login-knop tonen/verbergen bij paginalaad
+  updateLoginButtonVisibility();
 
   // Voeg listeners toe voor knoppen
   const herkenBtn = document.getElementById("herkenButton");
