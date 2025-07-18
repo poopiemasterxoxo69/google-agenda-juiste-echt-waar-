@@ -583,18 +583,20 @@ function parseEnToon(bewerkte=false) {
   const duur = document.getElementById("duur").value;
   const heleDag = document.getElementById("heleDag").checked;
 
-  if (bewerkte && window._bewerkteAfspraken) {
-    afspraken = window._bewerkteAfspraken;
-  } else {
-    const tekst = document.getElementById("inputText").value;
-    const tijdMatches = tekst.match(/(\d{1,2}[:.]\d{2})/g);
-    if (tijdMatches && tijdMatches.length > 1) {
-      afspraken = parseMeerdereAfsprakenInRegel(tekst);
+    if (bewerkte && window._bewerkteAfspraken) {
+      afspraken = window._bewerkteAfspraken;
     } else {
-      afspraken = [parseTextToEvent(tekst)];
+      const tekst = document.getElementById("inputText").value;
+      const tijdMatches = tekst.match(/(\d{1,2}[:.]\d{2})/g);
+      if (tijdMatches && tijdMatches.length > 1) {
+        afspraken = parseMeerdereAfsprakenInRegel(tekst);
+      } else {
+        afspraken = [parseTextToEvent(tekst)];
+      }
+      // Propagate kleur to all afspraken if not set
+      afspraken = afspraken.map(a => ({ ...a, kleur: a.kleur || kleur }));
+      window._bewerkteAfspraken = null;
     }
-    window._bewerkteAfspraken = null;
-  }
 
   if (afspraken.length > 0) {
     let html = "";
