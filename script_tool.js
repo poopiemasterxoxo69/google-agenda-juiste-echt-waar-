@@ -679,8 +679,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 // Check op conflicterende afspraken binnen 30 minuten
+// Controleer of er conflicterende afspraken zijn tussen start en end (timed en hele dag)
 async function checkConflictingEvents(start, end) {
-  // Haal events op binnen 30 minuten voor/na de nieuwe afspraak
+  // start en end zijn Date objecten
   const timeMin = new Date(start.getTime() - 30 * 60000).toISOString();
   const timeMax = new Date(end.getTime() + 30 * 60000).toISOString();
   const res = await gapi.client.calendar.events.list({
@@ -690,13 +691,19 @@ async function checkConflictingEvents(start, end) {
     singleEvents: true,
     orderBy: 'startTime'
   });
-  // Filter events die exact overlappen met de nieuwe afspraak
-  return res.result.items.filter(ev => {
-    const evStart = new Date(ev.start.dateTime || ev.start.date);
-    const evEnd = new Date(ev.end.dateTime || ev.end.date);
-    // Overlap als ev eindigt na start en begint voor end
+  if (!res.result.items) return false;
+  let conflicts = res.result.items.filter(ev => {
+    // Google Calendar API: hele dag events hebben alleen ev.start.date (geen dateTime)
+    let evStart = ev.start.dateTime ? new Date(ev.start.dateTime) : new Date(ev.start.date + 'T00:00:00');
+    let evEnd = ev.end.dateTime ? new Date(ev.end.dateTime) : new Date(ev.end.date + 'T23:59:59');
+    // Overlap: ev eindigt NA start én ev begint VOOR end
     return evEnd > start && evStart < end;
   });
+  if (conflicts.length > 0) {
+    console.log('Conflicterende afspraken gevonden:', conflicts);
+    return true;
+  }
+  return false;
 }
 
 function combineDateTime(datum, tijd) {
