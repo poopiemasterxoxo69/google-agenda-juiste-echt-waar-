@@ -844,7 +844,64 @@ async function addEvent() {
   }
   alert(`${toegevoegd} afspraak/afspraken toegevoegd aan je Google Agenda!${details}`);
 }
-// --- TypoCorrectie testcases ---
+
+// Inline handmatige afspraak toevoegen via + knop
+
+document.addEventListener('DOMContentLoaded', function() {
+  const plusBtn = document.getElementById('manual-plus-btn');
+  plusBtn && plusBtn.addEventListener('click', function() {
+    // Check of er al een lege edit-form is, zo ja: focus
+    if (document.querySelector('.manual-edit-form')) {
+      document.querySelector('.manual-edit-form input[name="titel"]').focus();
+      return;
+    }
+    // Maak lege afspraak (zelfde structuur als bestaande edit-form)
+    const afspraken = (window._bewerkteAfspraken && Array.isArray(window._bewerkteAfspraken)) ? window._bewerkteAfspraken.slice() : [];
+    // Render een lege edit-form bovenaan de afsprakenlijst
+    const outputDiv = document.getElementById('output');
+    if (!outputDiv) return;
+    const formDiv = document.createElement('div');
+    formDiv.className = 'veld';
+    formDiv.innerHTML = `
+      <form class="afspraak-edit manual-edit-form" style="margin-bottom:16px;">
+        <label>Titel: <input type="text" name="titel" value="" required></label><br>
+        <label>Datum: <input type="date" name="datum" required></label><br>
+        <label>Tijd: <select name="tijd">${genereerTijdOpties()}</select></label><br>
+        <label>Duur (min): <input type="number" name="duur" value="60" min="1" required></label><br>
+        <label>Kleur: <select name="kleur">${genereerKleurOpties('random')}</select></label><br>
+        <label><input type="checkbox" name="heleDag"> Hele dag</label><br>
+        <button type="submit" style="background:#27ae60;color:#fff;border:none;padding:6px 16px;border-radius:4px;font-weight:bold;cursor:pointer;margin-top:6px;">Toevoegen</button>
+        <button type="button" class="annuleer-btn" style="margin-left:8px;">Annuleer</button>
+      </form>
+    `;
+    outputDiv.prepend(formDiv);
+    formDiv.querySelector('input[name="titel"]').focus();
+    // Annuleer knop
+    formDiv.querySelector('.annuleer-btn').addEventListener('click', function() {
+      formDiv.remove();
+    });
+    // Submit logica
+    formDiv.querySelector('form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const afspraak = {
+        titel: form.titel.value,
+        datum: form.datum.value ? new Date(form.datum.value) : undefined,
+        tijd: form.tijd.value || undefined,
+        duur: form.duur.value || 60,
+        kleur: form.kleur.value || 'random',
+        heleDag: form.heleDag.checked
+      };
+      if (!window._bewerkteAfspraken || !Array.isArray(window._bewerkteAfspraken)) {
+        window._bewerkteAfspraken = [];
+      }
+      window._bewerkteAfspraken.unshift(afspraak);
+      parseEnToon(true);
+    });
+  });
+});
+
+
 (function testTypoCorrectieOverVoorKwartHalf() {
   const testCases = [
     // over
