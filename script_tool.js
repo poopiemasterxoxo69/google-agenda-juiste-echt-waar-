@@ -38,13 +38,17 @@
 
 // --- Google profile/foto patching ---
 function showProfileInfo(token) {
+  console.log('[DEBUG] showProfileInfo aangeroepen met token', token);
   fetch('https://people.googleapis.com/v1/people/me?personFields=photos,names,emailAddresses', {
     headers: { Authorization: 'Bearer ' + token }
   })
     .then(res => res.json())
     .then(data => {
       const profileBox = document.getElementById('profileBox');
-      if (!profileBox) return;
+      if (!profileBox) {
+        console.warn('[DEBUG] Geen profileBox gevonden in DOM!');
+        return;
+      }
       let imgUrl = '';
       let name = '';
       if (data.photos && data.photos[0] && data.photos[0].url) {
@@ -53,20 +57,25 @@ function showProfileInfo(token) {
       if (data.names && data.names[0] && data.names[0].displayName) {
         name = data.names[0].displayName;
       }
+      console.log('[DEBUG] Profiel data', {imgUrl, name, data});
       profileBox.innerHTML = imgUrl ? `<img src="${imgUrl}" alt="profiel" style="width:48px;height:48px;border-radius:50%;box-shadow:0 2px 8px #0003;vertical-align:middle;"> <span style='font-size:16px;font-weight:bold;vertical-align:middle;'>${name}</span>` : '';
       // Login-knop verbergen
       const loginBtn = document.getElementById('loginButton');
       if (loginBtn) loginBtn.style.display = 'none';
     })
-    .catch(() => {});
+    .catch((e) => {
+      console.error('[DEBUG] Fout bij ophalen profielinfo', e);
+    });
 }
 
 function patchTokenClientCallback() {
+  console.log('[DEBUG] patchTokenClientCallback aangeroepen');
   if (!window.tokenClient) return;
   if (window.tokenClient._profilePatched) return;
   const origCallback = window.tokenClient.callback;
   window.tokenClient.callback = function(response) {
     if (response && response.access_token) {
+      console.log('[DEBUG] patchTokenClientCallback: access_token ontvangen', response.access_token);
       showProfileInfo(response.access_token);
     }
     if (typeof origCallback === 'function') origCallback(response);
