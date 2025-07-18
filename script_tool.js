@@ -36,6 +36,9 @@
   document.head.appendChild(script);
 })();
 
+// Globale accessToken zodat deze overal beschikbaar is
+window.accessToken = null;
+
 // --- Google profile/foto patching ---
 function showProfileInfo(token) {
   console.log('[DEBUG] showProfileInfo aangeroepen met token', token);
@@ -934,7 +937,7 @@ function getActueleAfspraken() {
 }
 
 async function addEvent() {
-  if (!accessToken) {
+  if (!window.accessToken) {
     alert("Log eerst in met Google.");
     return;
   }
