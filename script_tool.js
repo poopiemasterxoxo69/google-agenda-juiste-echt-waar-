@@ -884,6 +884,18 @@ document.addEventListener('DOMContentLoaded', function() {
     formDiv.querySelector('form').addEventListener('submit', function(e) {
       e.preventDefault();
       const form = e.target;
+      // Validatie: datum verplicht
+      if (!form.datum.value) {
+        alert('Vul een datum in!');
+        form.datum.focus();
+        return;
+      }
+      // Validatie: tijd óf hele dag verplicht
+      if (!form.tijd.value && !form.heleDag.checked) {
+        alert('Vul een tijd in of vink "Hele dag" aan!');
+        form.tijd.focus();
+        return;
+      }
       const afspraak = {
         titel: form.titel.value,
         datum: form.datum.value ? new Date(form.datum.value) : undefined,
