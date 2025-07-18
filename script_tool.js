@@ -200,7 +200,7 @@ function buildAgendaGrid() {
   const weekNum = getWeekNumber(monday);
   const header = document.createElement('div');
   header.className = 'agenda-header';
-  header.style.cssText = 'height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:#303134;color:#fff;font-size:20px;font-weight:bold;';
+  header.style.cssText = 'height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;background:#303134;color:#fff;font-size:17px;font-weight:bold;touch-action:none;-webkit-user-select:none;user-select:none;';
   const weekText = document.createElement('span');
   let label = '';
   if (weekOffset === 0) label = ' (deze week)';
@@ -219,7 +219,7 @@ function buildAgendaGrid() {
   // Datum-bar
   const datumBar = document.createElement('div');
   datumBar.className = 'datum-bar';
-  datumBar.style.cssText = 'display:grid;grid-template-columns:60px repeat(7,1fr);height:48px;background:#222;color:#bbb;font-size:16px;align-items:center;border-bottom:1px solid #333;';
+  datumBar.style.cssText = 'display:grid;grid-template-columns:60px repeat(7,1fr);height:42px;background:#222;color:#bbb;font-size:15px;align-items:center;border-bottom:1px solid #333;position:sticky;top:48px;z-index:10;touch-action:none;-webkit-user-select:none;user-select:none;';
   datumBar.appendChild(document.createElement('div'));
   const dagen = ['Ma','Di','Wo','Do','Vr','Za','Zo'];
   for (let i=0; i<7; ++i) {
@@ -248,7 +248,7 @@ function buildAgendaGrid() {
   // Agenda grid
   const agenda = document.createElement('div');
   agenda.className = 'agenda';
-  agenda.style.cssText = 'display:grid;grid-template-columns:60px repeat(7,1fr);grid-template-rows:repeat(24,60px);height:calc(100vh - 144px);overflow-y:auto;background:#181818;position:relative;';
+  agenda.style.cssText = 'display:grid;grid-template-columns:60px repeat(7,1fr);grid-template-rows:repeat(24,60px);height:calc(100vh - 144px);overflow-y:auto;background:#181818;position:relative;-webkit-user-select:none;user-select:none;scroll-behavior:smooth;';
   agenda.tabIndex = 0;
   // Maak 24 rijen
   for (let uur=0; uur<24; ++uur) {
@@ -257,7 +257,7 @@ function buildAgendaGrid() {
       if (dag===0) {
         // Tijdskolom
         cel.textContent = (uur<10?'0':'')+uur+':00';
-        cel.style.cssText = 'color:#666;font-size:12px;display:flex;align-items:center;justify-content:center;border-right:1px solid #333;background:#181818;';
+        cel.style.cssText = 'color:#888;font-size:15px;display:flex;align-items:center;justify-content:center;border-right:1px solid #333;background:#181818;touch-action:none;-webkit-user-select:none;user-select:none;';
       } else {
         // Altijd verticale lijn, ook bij zondag
         cel.style.cssText = 'border-right:1px solid #444;border-bottom:1px solid #333;position:relative;background:#1a1a1a;';
@@ -276,6 +276,10 @@ function buildAgendaGrid() {
     if (touchStartX!==null && e.changedTouches.length===1) {
       const dx = e.changedTouches[0].clientX - touchStartX;
       if (Math.abs(dx)>40) {
+        // Swipe feedback: flash
+        agenda.style.transition = 'background 0.2s';
+        agenda.style.background = '#222';
+        setTimeout(()=>{agenda.style.background='#181818';}, 220);
         weekOffset += dx<0 ? 1 : -1;
         buildAgendaGrid();
       }
@@ -314,7 +318,7 @@ function vulAfsprakenInGrid(agenda, monday, allDayBar) {
         const chip = document.createElement('div');
         chip.className = 'allday-chip';
         chip.textContent = event.summary || '(geen titel)';
-        chip.style.cssText = `display:inline-block;max-width:90%;padding:2px 10px;margin:2px 2px 2px 0;background:${event.colorId&&colorMap[event.colorId]?colorMap[event.colorId]:'#4285f4'};color:#fff;font-size:12px;border-radius:12px;box-shadow:0 1px 4px #0003;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
+        chip.style.cssText = `display:inline-block;max-width:90%;padding:8px 14px;margin:4px 4px 4px 0;background:${event.colorId&&colorMap[event.colorId]?colorMap[event.colorId]:'#4285f4'};color:#fff;font-size:15px;border-radius:16px;box-shadow:0 2px 10px #0004;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:42px;`;
         chip.onclick = e => showEventTooltip(event, e.target);
         cel.appendChild(chip);
       }
@@ -355,15 +359,16 @@ function vulAfsprakenInGrid(agenda, monday, allDayBar) {
           if (event.colorId && colorMap[event.colorId]) kleur = colorMap[event.colorId];
           taak.style.background = kleur;
           taak.style.color = '#fff';
-          taak.style.borderRadius = '8px';
-          taak.style.padding = '4px 8px';
-          taak.style.fontSize = '12px';
+          taak.style.borderRadius = '12px';
+          taak.style.padding = '8px 10px';
+          taak.style.fontSize = '15px';
           taak.style.zIndex = 2;
-          taak.style.boxShadow = '0 2px 6px #0003';
+          taak.style.boxShadow = '0 2px 10px #0005';
           taak.style.whiteSpace = 'nowrap';
           taak.style.overflow = 'hidden';
           taak.style.textOverflow = 'ellipsis';
           taak.style.cursor = 'pointer';
+          taak.style.minHeight = '42px';
           taak.onclick = e => showEventTooltip(event, e.target);
           cell.appendChild(taak);
         }
@@ -377,7 +382,8 @@ function showEventTooltip(event, target) {
   document.querySelectorAll('.event-tooltip').forEach(tip=>tip.remove());
   const tip = document.createElement('div');
   tip.className = 'event-tooltip';
-  tip.style.cssText = 'position:fixed;z-index:9999;background:#303134;color:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 4px 24px #0008;font-size:14px;max-width:260px;min-width:160px;pointer-events:auto;';
+  // Mobiel: onderin scherm, grote tekst, sluitknop
+  tip.style.cssText = 'position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:9999;background:#28292b;color:#fff;padding:20px 16px 30px 16px;border-radius:18px 18px 0 0;box-shadow:0 -4px 24px #000a;font-size:18px;max-width:98vw;min-width:180px;width:96vw;pointer-events:auto;transition:bottom 0.25s;';
   let tijd = '';
   if (event.start.dateTime && event.end.dateTime) {
     const sd = new Date(event.start.dateTime);
@@ -386,11 +392,7 @@ function showEventTooltip(event, target) {
   } else if (event.start.date) {
     tijd = 'Hele dag';
   }
-  tip.innerHTML = `<b>${event.summary||'(geen titel)'}</b><br>${tijd}${event.location?'<br><span style="color:#aaf">📍 '+event.location+'</span>':''}${event.description?'<br><span style="color:#bbb">'+event.description+'</span>':''}`;
-  // Positie
-  const rect = target.getBoundingClientRect();
-  tip.style.top = (rect.bottom+8)+'px';
-  tip.style.left = (rect.left)+'px';
+  tip.innerHTML = `<div style='font-size:20px;font-weight:bold;margin-bottom:8px;'>${event.summary||'(geen titel)'}</div><div style='margin-bottom:6px;'>${tijd}</div>${event.location?'<div style="color:#aaf;margin-bottom:6px;">📍 '+event.location+'</div>':''}${event.description?'<div style=\"color:#bbb;white-space:pre-line;\">'+event.description+'</div>':''}<button style='position:absolute;right:18px;top:10px;background:none;border:none;color:#fff;font-size:28px;line-height:1;cursor:pointer;' onclick='this.parentNode.remove()'>&times;</button>`;
   // Sluiten bij klik buiten tooltip
   function closeTip(e) {
     if (!tip.contains(e.target)) { tip.remove(); document.removeEventListener('mousedown', closeTip); }
