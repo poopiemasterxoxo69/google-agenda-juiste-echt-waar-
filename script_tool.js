@@ -1,13 +1,13 @@
-(function ensureGapiLoadedAndCallGapiLoaded() {
-  // Controleer of gapi al beschikbaar is
-  if (window.gapi) {
-    // gapi is al geladen, roep direct gapiLoaded aan
-    if (typeof window.gapiLoaded === 'function') {
-      window.gapiLoaded();
-    }
-    return;
+console.log("script_tool.js geladen");
+console.log("deleteAllAfspraken in window?", typeof window.deleteAllAfspraken);
+// GAPI loader direct uitvoeren zodat functies globaal blijven
+// Controleer of gapi al beschikbaar is
+if (window.gapi) {
+  // gapi is al geladen, roep direct gapiLoaded aan
+  if (typeof window.gapiLoaded === 'function') {
+    window.gapiLoaded();
   }
-
+} else {
   // Controleer of het script al bestaat
   var existingScript = document.querySelector('script[src="https://apis.google.com/js/api.js"]');
   if (existingScript) {
@@ -20,21 +20,20 @@
         }
       });
     }
-    return;
+  } else {
+    // Script nog niet aanwezig: injecteer het en stel onload in
+    var script = document.createElement('script');
+    script.src = 'https://apis.google.com/js/api.js';
+    script.async = true;
+    script.defer = true;
+    script.onload = function() {
+      if (typeof window.gapiLoaded === 'function') {
+        window.gapiLoaded();
+      }
+    };
+    document.head.appendChild(script);
   }
-
-  // Script nog niet aanwezig: injecteer het en stel onload in
-  var script = document.createElement('script');
-  script.src = 'https://apis.google.com/js/api.js';
-  script.async = true;
-  script.defer = true;
-  script.onload = function() {
-    if (typeof window.gapiLoaded === 'function') {
-      window.gapiLoaded();
-    }
-  };
-  document.head.appendChild(script);
-})();
+}
 
 // **script_tool.js** (geüpdatet)
 
@@ -74,7 +73,7 @@ function typoCorrectieOverVoorKwartHalf(tekst) {
   tekst = tekst.replace(/(\d+)\s*([a-z]{2,8})\s*(\d+)/gi, (match, p1, p2, p3) => {
     // Corrigeer typo in tijdwoord vóór spatieherkenning
     const tijdwoorden = [
-      "over", "ovr", "oveer", "oevr", "ovre", "oevre", "ober", "ove", "ive", "obver", "iver",
+      "over", "ovr", "oveer", "oevr", "ovre", "oevre", "ober", "ove", "iver", "obver", "iver",
       "voor", "vor", "foor", "vooor", "vooe", "voer", "voof", "voot", "vopr", "v0or", "vorr", "vdor",
       "kwart", "kwrat", "kwarrt", "kwartt", "kwartd", "quwart", "kwwart", "kwat", "kqart", "kwrat", "kwarrd", "kwakt", "kwaet",
       "half", "hlf", "hafl", "hallf", "hslf", "halb", "halv", "hqlf", "halff", "hslv", "halc", "halg"
@@ -95,7 +94,7 @@ function typoCorrectieOverVoorKwartHalf(tekst) {
     donderdag: ["donderdag","donerdag","donderdga","donderdahg","donderdgg","donderdah","donderdahg","donerdgg","donedrag","donderdgg","donderdgh","dondardag","donerdag","donderdgg","donderdahg","donderdgg","donerdg","donderdgg","donderdahg"],
     vrijdag: ["vrijdag","vriijdag","vriidag","vrijdagg","vrijdagh","vrijdag","vriidag","vrijdagh","vrijdagg","vrijdajg","vrijdag","vrijdaj","vrijdag","vrjidag","vrijdagh","vrijdajg","vrjidag","vrijdja","vrijdajg","vrijdagh"],
     zaterdag: ["zaterdag","zaterdahg","zaterdg","zaterddag","zaaterdag","zatterdag","zateradg","zaterdagg","zaterdga","zaterdgg","zatedrag","zateerdag","zaterdga","zaterdgg","zaterdagh","zateerdag","zaterdga","zaterdag","zaterdgg","zateradg"],
-    zondag: ["zondag","zonddag","zondag","zondagg","zondahg","zondag","zonndag","zodnag","zondag","zonndag","zondgg","zondag","zodnag","zondahg","zonndagg","zondag","zonddagg","zonndag","zondg","zondahg"]
+    zondag: ["zondag","zonddag","zondagg","zondahg","zonndag","zodnag","zondgg","zonndagg","zonddagg","zondg"]
   };
   let t = tekst;
   for (const [correct, typos] of Object.entries(typoMap)) {
@@ -142,7 +141,7 @@ function corrigeerDagTypo(tekst) {
     // donderdag
     'donderdg': 'donderdag', 'donderag': 'donderdag', 'donderdaag': 'donderdag', 'donerdag': 'donderdag',
     // vrijdag
-    'vrydag': 'vrijdag', 'vijrdag': 'vrijdag', 'vijdaag': 'vrijdag', 'vrjidag': 'vrijdag',
+    'vriijdag': 'vrijdag', 'vijrdag': 'vrijdag', 'vijdaag': 'vrijdag', 'vrjidag': 'vrijdag',
     // zaterdag
     'zaterag': 'zaterdag', 'zaterdg': 'zaterdag', 'zaterdah': 'zaterdag', 'zaterdaag': 'zaterdag',
     // zondag
@@ -188,7 +187,7 @@ function parseTextToEvent(text, weekContext = null) {
   }
   // Flexibele datum/tijd parsing
   const datumRegex = /(?:datum[:\s]*)?(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?|(?:datum[:\s]*)?(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)(?:\s+(\d{4}))?/i;
-  const tijdLabelRegex = /tijd[:\s]*([0-9]{1,2}[:.][0-9]{2})/i;
+  const tijdLabelRegex = /tijd[:\s]*([0-9]{1,2}[:.][0-9]{2})/gi;
   const dateMatch = datumRegex.exec(origineleTekst);
   let tijdLabelMatch = tijdLabelRegex.exec(origineleTekst);
   let tijdLabel = tijdLabelMatch ? tijdLabelMatch[1].replace('.', ':') : null;
@@ -559,6 +558,7 @@ function deleteAllAfspraken() {
   if (window.afsprakenBuffer) window.afsprakenBuffer = null;
   // Eventueel andere globale buffers hier wissen
 }
+window.deleteAllAfspraken = deleteAllAfspraken;
 
 function formatDatumNederlands(datum) {
   if (!(datum instanceof Date) || isNaN(datum.getTime())) return '';
@@ -667,9 +667,15 @@ function parseEnToon(bewerkte=false) {
 
 
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("DOMContentLoaded fired");
   const knop = document.getElementById("herkenButton");
+  console.log("herkenButton gevonden?", !!knop);
   if (knop) {
-    knop.addEventListener("click", parseEnToon);
+    knop.addEventListener("click", function() {
+      console.log("herkenButton click: deleteAllAfspraken=", typeof window.deleteAllAfspraken);
+      deleteAllAfspraken();
+      parseEnToon();
+    });
   }
   const voegToeButton = document.getElementById("voegToeButton");
   if (voegToeButton) {
@@ -745,25 +751,11 @@ async function addEvent() {
     let eersteBlok = tekst.split(new RegExp(`[\r\n\.]+|, (?=${dagRegex2})`, 'i')).find(r => new RegExp(`\\b(${dagRegex2})\\b`, 'i').test(r));
     let hoofdTitel = null;
     if (eersteBlok) {
-      let dagMatch = eersteBlok.match(new RegExp(`^(.*?)\\b(${dagRegex2})\\b`, 'i'));
-      if (dagMatch && dagMatch[1].trim().length > 0) {
-        hoofdTitel = titelopschoner(dagMatch[1].trim());
-      }
     }
-    // Fallback hoofd-titel toepassen
-    afspraken = afspraken.map(afspraak => {
-      let schoneTitel = titelopschoner(afspraak.titel);
-      if (!schoneTitel || schoneTitel === "Onbekende afspraak") {
-        schoneTitel = hoofdTitel ? hoofdTitel : "Onbekende afspraak";
-      }
-      return { ...afspraak, titel: schoneTitel };
-    });
-  } else {
-    afspraken = [parseTextToEvent(tekst)];
-    afspraken = afspraken.map(afspraak => ({ ...afspraak, titel: titelopschoner(afspraak.titel) }));
   }
 
   let toegevoegd = 0;
+  let details = '';
   for (const afspraak of afspraken) {
     let event = {};
     if (heleDag) {
@@ -841,10 +833,10 @@ async function addEvent() {
     } catch (e) {}
   }
   alert(`${toegevoegd} afspraak/afspraken toegevoegd aan je Google Agenda!`);
-}
 
 // --- TypoCorrectie testcases ---
-(function testTypoCorrectieOverVoorKwartHalf() {
+// Testfunctie voor typoCorrectieOverVoorKwartHalf
+function testTypoCorrectieOverVoorKwartHalf() {
   const testCases = [
     // over
     ["ovr", "over"], ["oveer", "over"], ["oevr", "over"], ["ovre", "over"], ["oevre", "over"], ["ober", "over"], ["ove", "over"], ["iver", "over"], ["obver", "over"],
@@ -872,5 +864,5 @@ async function addEvent() {
   if (allPassed) {
     console.log('✅ Alle typoCorrectieOverVoorKwartHalf tests geslaagd!');
   }
-})();
-
+}
+// testTypoCorrectieOverVoorKwartHalf(); // Uncomment om te testen
