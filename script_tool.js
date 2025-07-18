@@ -593,8 +593,15 @@ function parseEnToon(bewerkte=false) {
       } else {
         afspraken = [parseTextToEvent(tekst)];
       }
-      // Propagate kleur to all afspraken if not set
-      afspraken = afspraken.map(a => ({ ...a, kleur: a.kleur || kleur }));
+      // Propagate kleur to all afspraken if not set, en maak 'random' echt random
+      afspraken = afspraken.map(a => {
+        let k = a.kleur || kleur;
+        if (k === 'random') {
+          const kleuren = ['1','2','3','4','5','6','7','8','9','10','11'];
+          k = kleuren[Math.floor(Math.random()*kleuren.length)];
+        }
+        return { ...a, kleur: k };
+      });
       window._bewerkteAfspraken = null;
     }
 
