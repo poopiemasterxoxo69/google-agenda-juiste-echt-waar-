@@ -760,6 +760,36 @@ async function addEvent() {
       return { ...afspraak, titel: schoneTitel };
     });
   }
+
+  // Voeg afspraken toe aan Google Agenda
+  let toegevoegd = 0;
+  let details = "";
+  for (const afspraak of afspraken) {
+    let start, end, datum;
+    if (heleDag) {
+      datum = afspraak.datum || new Date();
+      start = { date: datum.toISOString().slice(0, 10) };
+      end = { date: datum.toISOString().slice(0, 10) };
+    } else {
+      datum = afspraak.datum || new Date();
+      start = { dateTime: combineDateTime(datum, afspraak.tijd), timeZone: 'Europe/Amsterdam' };
+      end = { dateTime: berekenEindtijd(datum, afspraak.tijd, duur), timeZone: 'Europe/Amsterdam' };
+    }
+    const event = {
+      summary: afspraak.titel,
+      start,
+      end,
+      colorId: kleur === 'random' ? undefined : kleur
+    };
+    try {
+      await gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
+      toegevoegd++;
+      details += `\nTitel: ${event.summary}\nDatum: ${heleDag ? start.date : datum.toLocaleString()}\nTijd: ${afspraak.tijd || ''}\nKleur: ${kleur}\nDuur: ${duur} min\n---`;
+    } catch (e) {
+      details += `\nFout bij toevoegen van afspraak: ${event.summary} (${e.message})`;
+    }
+  }
+  alert(`${toegevoegd} afspraak/afspraken toegevoegd aan je Google Agenda!${details}`);
 // --- TypoCorrectie testcases ---
 (function testTypoCorrectieOverVoorKwartHalf() {
   const testCases = [
