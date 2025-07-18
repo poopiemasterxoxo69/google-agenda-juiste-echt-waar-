@@ -739,43 +739,44 @@ async function addEvent() {
   const kleur = document.getElementById("kleur").value;
   const duur = parseInt(document.getElementById("duur").value);
   const heleDag = document.getElementById("heleDag").checked;
-    // Hoofd-titel bepalen voor fallback
-    let dagNamen = ["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
-    let dagRegex2 = dagNamen.join("|");
-    const tekst = document.getElementById("inputText").value;
-    let eersteBlok = tekst.split(new RegExp(`[\r\n\.]+|, (?=${dagRegex2})`, 'i')).find(r => new RegExp(`\\b(${dagRegex2})\\b`, 'i').test(r));
-    let hoofdTitel = null;
-    if (eersteBlok) {
-      let dagMatch = eersteBlok.match(new RegExp(`^(.*?)\\b(${dagRegex2})\\b`, 'i'));
-      if (dagMatch && dagMatch[1].trim().length > 0) {
-        hoofdTitel = titelopschoner(dagMatch[1].trim());
-      }
+  // Hoofd-titel bepalen voor fallback
+  let dagNamen = ["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
+  let dagRegex2 = dagNamen.join("|");
+  const tekst = document.getElementById("inputText").value;
+  let eersteBlok = tekst.split(new RegExp(`[\r\n\.]+|, (?=${dagRegex2})`, 'i')).find(r => new RegExp(`\b(${dagRegex2})\b`, 'i').test(r));
+  let hoofdTitel = null;
+  if (eersteBlok) {
+    let dagMatch = eersteBlok.match(new RegExp(`^(.*?)\b(${dagRegex2})\b`, 'i'));
+    if (dagMatch && dagMatch[1].trim().length > 0) {
+      hoofdTitel = titelopschoner(dagMatch[1].trim());
     }
-    // Fallback hoofd-titel toepassen
-    afspraken = afspraken.map(afspraak => {
-      let schoneTitel = titelopschoner(afspraak.titel);
-      if (!schoneTitel || schoneTitel === "Onbekende afspraak") {
-        schoneTitel = hoofdTitel ? hoofdTitel : "Onbekende afspraak";
-      }
-      return { ...afspraak, titel: schoneTitel };
-    });
   }
-
-  // Voeg afspraken toe aan Google Agenda
-  let toegevoegd = 0;
-  let details = "";
-  for (const afspraak of afspraken) {
-    let start, end, datum;
-    if (heleDag) {
-      datum = afspraak.datum || new Date();
-      start = { date: datum.toISOString().slice(0, 10) };
-      end = { date: datum.toISOString().slice(0, 10) };
-    } else {
-      datum = afspraak.datum || new Date();
-      start = { dateTime: combineDateTime(datum, afspraak.tijd), timeZone: 'Europe/Amsterdam' };
-      end = { dateTime: berekenEindtijd(datum, afspraak.tijd, duur), timeZone: 'Europe/Amsterdam' };
+  // Fallback hoofd-titel toepassen
+  afspraken = afspraken.map(afspraak => {
+    let schoneTitel = titelopschoner(afspraak.titel);
+    if (!schoneTitel || schoneTitel === "Onbekende afspraak") {
+      schoneTitel = hoofdTitel ? hoofdTitel : "Onbekende afspraak";
     }
-    const event = {
+    return { ...afspraak, titel: schoneTitel };
+  });
+
+  let toegevoegd = 0;
+  let details = '';
+  for (let afspraak of afspraken) {
+    let start, end;
+    let datum = afspraak.datum instanceof Date ? afspraak.datum : new Date(afspraak.datum);
+    if (heleDag) {
+      start = { date: datum.toISOString().slice(0, 10) };
+      // End moet de volgende dag zijn voor hele dag events
+      let endDate = new Date(datum);
+      endDate.setDate(endDate.getDate() + 1);
+      end = { date: endDate.toISOString().slice(0, 10) };
+    } else {
+      start = { dateTime: datum.toISOString(), timeZone: 'Europe/Amsterdam' };
+      let eind = new Date(datum.getTime() + (duur || 60) * 60000);
+      end = { dateTime: eind.toISOString(), timeZone: 'Europe/Amsterdam' };
+    }
+    let event = {
       summary: afspraak.titel,
       start,
       end,
@@ -790,6 +791,7 @@ async function addEvent() {
     }
   }
   alert(`${toegevoegd} afspraak/afspraken toegevoegd aan je Google Agenda!${details}`);
+}
 // --- TypoCorrectie testcases ---
 (function testTypoCorrectieOverVoorKwartHalf() {
   const testCases = [
