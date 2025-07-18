@@ -123,6 +123,21 @@ document.addEventListener('DOMContentLoaded', function() {
   // Login-knop tonen/verbergen bij paginalaad
   updateLoginButtonVisibility();
 
+  // Periodiek controleren of status 'Ingelogd ✔' is
+  function monitorLoginStatus() {
+    var statusP = document.getElementById('status');
+    var loginBtn = document.getElementById('loginButton');
+    if (statusP && loginBtn) {
+      if (statusP.textContent && statusP.textContent.includes('Ingelogd')) {
+        loginBtn.style.display = 'none';
+      } else {
+        loginBtn.style.display = '';
+      }
+    }
+    setTimeout(monitorLoginStatus, 500);
+  }
+  monitorLoginStatus();
+
   // Voeg listeners toe voor knoppen
   const herkenBtn = document.getElementById("herkenButton");
   if (herkenBtn) herkenBtn.addEventListener("click", parseEnToon);
