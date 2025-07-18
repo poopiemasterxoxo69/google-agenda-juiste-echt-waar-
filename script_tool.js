@@ -593,15 +593,8 @@ function parseEnToon(bewerkte=false) {
       } else {
         afspraken = [parseTextToEvent(tekst)];
       }
-      // Propagate kleur to all afspraken if not set, en maak 'random' echt random
-      afspraken = afspraken.map(a => {
-        let k = a.kleur || kleur;
-        if (k === 'random') {
-          const kleuren = ['1','2','3','4','5','6','7','8','9','10','11'];
-          k = kleuren[Math.floor(Math.random()*kleuren.length)];
-        }
-        return { ...a, kleur: k };
-      });
+      // Propagate kleur to all afspraken if not set, maar laat 'random' gewoon als 'random' staan
+      afspraken = afspraken.map(a => ({ ...a, kleur: a.kleur || kleur }));
       window._bewerkteAfspraken = null;
     }
 
@@ -782,7 +775,11 @@ async function addEvent() {
     let start, end;
     // Google Calendar colorId moet een string zijn van 1 t/m 11 (geen undefined/null)
     let kleurEvent = undefined;
-    if (afspraak.kleur && afspraak.kleur !== 'random') {
+    if (afspraak.kleur === 'random' || (!afspraak.kleur && kleur === 'random')) {
+      // Kies nu pas een random kleur
+      const kleuren = ['1','2','3','4','5','6','7','8','9','10','11'];
+      kleurEvent = kleuren[Math.floor(Math.random()*kleuren.length)];
+    } else if (afspraak.kleur && afspraak.kleur !== 'random') {
       kleurEvent = String(afspraak.kleur);
     } else if (kleur && kleur !== 'random') {
       kleurEvent = String(kleur);
