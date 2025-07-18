@@ -36,7 +36,52 @@
   document.head.appendChild(script);
 })();
 
-// **script_tool.js** (geüpdatet)
+// --- Google profile/foto patching ---
+function showProfileInfo(token) {
+  fetch('https://people.googleapis.com/v1/people/me?personFields=photos,names,emailAddresses', {
+    headers: { Authorization: 'Bearer ' + token }
+  })
+    .then(res => res.json())
+    .then(data => {
+      const profileBox = document.getElementById('profileBox');
+      if (!profileBox) return;
+      let imgUrl = '';
+      let name = '';
+      if (data.photos && data.photos[0] && data.photos[0].url) {
+        imgUrl = data.photos[0].url;
+      }
+      if (data.names && data.names[0] && data.names[0].displayName) {
+        name = data.names[0].displayName;
+      }
+      profileBox.innerHTML = imgUrl ? `<img src="${imgUrl}" alt="profiel" style="width:48px;height:48px;border-radius:50%;box-shadow:0 2px 8px #0003;vertical-align:middle;"> <span style='font-size:16px;font-weight:bold;vertical-align:middle;'>${name}</span>` : '';
+      // Login-knop verbergen
+      const loginBtn = document.getElementById('loginButton');
+      if (loginBtn) loginBtn.style.display = 'none';
+    })
+    .catch(() => {});
+}
+
+function patchTokenClientCallback() {
+  if (!window.tokenClient) return;
+  if (window.tokenClient._profilePatched) return;
+  const origCallback = window.tokenClient.callback;
+  window.tokenClient.callback = function(response) {
+    if (response && response.access_token) {
+      showProfileInfo(response.access_token);
+    }
+    if (typeof origCallback === 'function') origCallback(response);
+  };
+  window.tokenClient._profilePatched = true;
+}
+
+// Patch direct als tokenClient al bestaat
+if (window.tokenClient) patchTokenClientCallback();
+// Patch zodra gapiLoaded wordt aangeroepen (tokenClient kan dan bestaan)
+const origGapiLoaded = window.gapiLoaded;
+window.gapiLoaded = function() {
+  patchTokenClientCallback();
+  if (typeof origGapiLoaded === 'function') origGapiLoaded();
+};
 
 // Hulpfuncties blijven ongewijzigd:
 function todayWithoutTime() {
