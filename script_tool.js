@@ -1,3 +1,4 @@
+
 (function ensureGapiLoadedAndCallGapiLoaded() {
   // Controleer of gapi al beschikbaar is
   if (window.gapi) {
@@ -1236,80 +1237,6 @@ async function addEvent() {
   alert(`${toegevoegd} afspraak/afspraken toegevoegd aan je Google Agenda!${details}`);
 }
 
-// --- Frutiger Aero dynamische effecten ---
-document.addEventListener('DOMContentLoaded', function() {
-  // Glans-animatie voor de zwevende + knop
-  const plusBtn = document.getElementById('manual-plus-btn');
-  if (plusBtn) {
-    plusBtn.addEventListener('mouseenter', function() {
-      let gloss = document.createElement('div');
-      gloss.style.position = 'absolute';
-      gloss.style.top = '0';
-      gloss.style.left = '0';
-      gloss.style.width = '100%';
-      gloss.style.height = '100%';
-      gloss.style.borderRadius = '50%';
-      gloss.style.pointerEvents = 'none';
-      gloss.style.background = 'linear-gradient(120deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.1) 80%)';
-      gloss.style.opacity = '0';
-      gloss.style.transition = 'opacity 0.5s';
-      gloss.className = 'aero-gloss';
-      plusBtn.style.position = 'relative';
-      plusBtn.appendChild(gloss);
-      setTimeout(() => {
-        gloss.style.opacity = '1';
-      }, 10);
-    });
-    plusBtn.addEventListener('mouseleave', function() {
-      const gloss = plusBtn.querySelector('.aero-gloss');
-      if (gloss) {
-        gloss.style.opacity = '0';
-        setTimeout(() => gloss.remove(), 500);
-      }
-    });
-  }
-
-  // Focus highlight op textarea/select
-  const inputs = document.querySelectorAll('textarea, select');
-  inputs.forEach(inp => {
-    inp.addEventListener('focus', function() {
-      inp.style.boxShadow = '0 2px 18px 0 rgba(80,180,240,0.20)';
-      inp.style.background = 'rgba(255,255,255,0.98)';
-    });
-    inp.addEventListener('blur', function() {
-      inp.style.boxShadow = '';
-      inp.style.background = 'rgba(255,255,255,0.7)';
-    });
-  });
-
-  // Waterdruppel animatie bij toevoegen afspraak
-  const voegToeBtn = document.getElementById('voegToeButton');
-  if (voegToeBtn) {
-    voegToeBtn.addEventListener('click', function(e) {
-      const rect = voegToeBtn.getBoundingClientRect();
-      const drop = document.createElement('span');
-      drop.style.position = 'absolute';
-      drop.style.left = (e.clientX - rect.left - 15) + 'px';
-      drop.style.top = (e.clientY - rect.top - 15) + 'px';
-      drop.style.width = '30px';
-      drop.style.height = '30px';
-      drop.style.borderRadius = '50%';
-      drop.style.background = 'radial-gradient(circle, #b2f0e6 60%, #8fd3fe 100%)';
-      drop.style.opacity = '0.7';
-      drop.style.pointerEvents = 'none';
-      drop.style.zIndex = '1000';
-      drop.style.transform = 'scale(0.7)';
-      drop.style.transition = 'opacity 0.7s, transform 0.7s';
-      voegToeBtn.style.position = 'relative';
-      voegToeBtn.appendChild(drop);
-      setTimeout(() => {
-        drop.style.opacity = '0';
-        drop.style.transform = 'scale(2.2)';
-      }, 10);
-      setTimeout(() => drop.remove(), 700);
-    });
-  }
-
 // Inline handmatige afspraak toevoegen via + knop
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -1408,4 +1335,3 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Alle typoCorrectieOverVoorKwartHalf tests geslaagd!');
   }
 })();
-});
