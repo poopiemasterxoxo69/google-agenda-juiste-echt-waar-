@@ -216,7 +216,7 @@ function typoCorrectieOverVoorKwartHalf(tekst) {
   tekst = tekst.replace(/(\d+)\s*([a-z]{2,8})\s*(\d+)/gi, (match, p1, p2, p3) => {
     // Corrigeer typo in tijdwoord vóór spatieherkenning
     const tijdwoorden = [
-      "over", "ovr", "oveer", "oevr", "ovre", "oevre", "ober", "ove", "ive", "obver", "iver",
+      "over", "ovr", "oveer", "oevr", "ovre", "oevre", "ober", "ove", "iver", "obver", "iver",
       "voor", "vor", "foor", "vooor", "vooe", "voer", "voof", "voot", "vopr", "v0or", "vorr", "vdor",
       "kwart", "kwrat", "kwarrt", "kwartt", "kwartd", "quwart", "kwwart", "kwat", "kqart", "kwrat", "kwarrd", "kwakt", "kwaet",
       "half", "hlf", "hafl", "hallf", "hslf", "halb", "halv", "hqlf", "halff", "hslv", "halc", "halg"
@@ -237,7 +237,7 @@ function typoCorrectieOverVoorKwartHalf(tekst) {
     donderdag: ["donderdag","donerdag","donderdga","donderdahg","donderdgg","donderdah","donderdahg","donerdgg","donedrag","donderdgg","donderdgh","dondardag","donerdag","donderdgg","donderdahg","donderdgg","donerdg","donderdgg","donderdahg"],
     vrijdag: ["vrijdag","vriijdag","vriidag","vrijdagg","vrijdagh","vrijdag","vriidag","vrijdagh","vrijdagg","vrijdajg","vrijdag","vrijdaj","vrijdag","vrjidag","vrijdagh","vrijdajg","vrjidag","vrijdja","vrijdajg","vrijdagh"],
     zaterdag: ["zaterdag","zaterdahg","zaterdg","zaterddag","zaaterdag","zatterdag","zateradg","zaterdagg","zaterdga","zaterdgg","zatedrag","zateerdag","zaterdga","zaterdgg","zaterdagh","zateerdag","zaterdga","zaterdag","zaterdgg","zateradg"],
-    zondag: ["zondag","zonddag","zondag","zondagg","zondahg","zondag","zonndag","zodnag","zondag","zonndag","zondgg","zondag","zodnag","zondahg","zonndagg","zondag","zonddagg","zonndag","zondg","zondahg"]
+    zondag: ["zondag","zonddag","zondagg","zondahg","zonndag","zodnag","zondgg","zonndagg","zonddagg","zondg"]
   };
   let t = tekst;
   for (const [correct, typos] of Object.entries(typoMap)) {
@@ -330,7 +330,7 @@ function parseTextToEvent(text, weekContext = null) {
   }
   // Flexibele datum/tijd parsing
   const datumRegex = /(?:datum[:\s]*)?(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?|(?:datum[:\s]*)?(\d{1,2})\s+(januari|februari|maart|april|mei|juni|juli|augustus|september|oktober|november|december)(?:\s+(\d{4}))?/i;
-  const tijdLabelRegex = /tijd[:\s]*([0-9]{1,2}[:.][0-9]{2})/i;
+  const tijdLabelRegex = /tijd[:\s]*([0-9]{1,2}[:.][0-9]{2})/gi;
   const dateMatch = datumRegex.exec(origineleTekst);
   let tijdLabelMatch = tijdLabelRegex.exec(origineleTekst);
   let tijdLabel = tijdLabelMatch ? tijdLabelMatch[1].replace('.', ':') : null;
@@ -1055,6 +1055,60 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
+// --- WEEKAGENDA FUNCTIE ---
+async function laadWeekAfspraken(agendaDiv) {
+  if (!window.gapi || !window.gapi.client || !window.accessToken) {
+    agendaDiv.innerHTML = '<p>Log eerst in met Google.</p>';
+    return;
+  }
+  // Bereken begin/eind van de huidige week (maandag t/m zondag)
+  const now = new Date();
+  const day = now.getDay(); // 0=zon, 1=maa, ...
+  const diffToMonday = (day === 0 ? -6 : 1) - day;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diffToMonday);
+  monday.setHours(0,0,0,0);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23,59,59,999);
+  try {
+    let events = [];
+    let pageToken = undefined;
+    do {
+      const res = await gapi.client.calendar.events.list({
+        calendarId: 'primary',
+        timeMin: monday.toISOString(),
+        timeMax: sunday.toISOString(),
+        singleEvents: true,
+        orderBy: 'startTime',
+        maxResults: 2500,
+        pageToken
+      });
+      events = events.concat(res.result.items || []);
+      pageToken = res.result.nextPageToken;
+    } while (pageToken);
+    if (events.length === 0) {
+      agendaDiv.innerHTML = '<p>Geen afspraken voor deze week.</p>';
+      return;
+    }
+    // Sorteer en toon
+    let html = '<ul style="list-style:none;padding:0;">';
+    for (const ev of events) {
+      let start = ev.start.dateTime || ev.start.date;
+      let tijd = ev.start.dateTime ?
+        (new Date(ev.start.dateTime)).toLocaleString('nl-NL', { weekday:'short', hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit' }) :
+        (new Date(ev.start.date)).toLocaleDateString('nl-NL', { weekday:'short', day:'2-digit', month:'2-digit' });
+      html += `<li style="margin-bottom:0.5em;padding:0.5em 0.7em;background:#f6f8fa;border-radius:8px;">
+        <b>${ev.summary || '(geen titel)'}</b><br>
+        <span style="color:#555;">${tijd}</span>
+      </li>`;
+    }
+    html += '</ul>';
+    agendaDiv.innerHTML = html;
+  } catch (e) {
+    agendaDiv.innerHTML = '<p>Fout bij laden van afspraken: ' + e.message + '</p>';
+  }
+}
 
 (function testTypoCorrectieOverVoorKwartHalf() {
   const testCases = [
@@ -1085,4 +1139,3 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Alle typoCorrectieOverVoorKwartHalf tests geslaagd!');
   }
 })();
-
