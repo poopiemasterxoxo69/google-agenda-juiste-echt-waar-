@@ -13,61 +13,481 @@
   <!-- Web App Manifest -->
   <link rel="manifest" href="manifest.json">
   <style>
+    /* Frutiger Aero Enhanced Styles */
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    @keyframes shimmer {
+      0% { background-position: -1000px 0; }
+      100% { background-position: 1000px 0; }
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    
+    @keyframes glow {
+      0% { box-shadow: 0 0 5px #7fbfff; }
+      50% { box-shadow: 0 0 20px #7fbfff, 0 0 30px #7fbfff; }
+      100% { box-shadow: 0 0 5px #7fbfff; }
+    }
     body {
-      font-family: sans-serif;
-      background-color: #f5f5f5;
+      font-family: 'Segoe UI', 'Frutiger', 'Arial', sans-serif;
+      background: linear-gradient(-45deg, #dbeafe, #b2f0e6, #a5d8ff, #b2f0e6);
+      background-size: 400% 400%;
+      animation: gradientBG 15s ease infinite;
+      min-height: 100vh;
       max-width: 700px;
       margin: auto;
       padding: 20px;
+      color: #1b2a38;
+      overflow-x: hidden;
+      position: relative;
     }
-    /* Stijl voor de aanpas (edit) knop rechtsboven in een afspraakblok */
-    .aanpas-btn {
-      position: absolute;
-      top: 40px;
-      left: 300px;
-      font-size: 16px;
-      padding: 0;
-      background: transparent;
-      border: black;
-      border-width: 10px;
-      box-shadow: none;
-      border-radius: 0;
-      line-height: 1;
-      min-width: unset;
+    
+    /* Animated background */
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    
+    /* Glowing orb decorators */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(60px);
+      z-index: -1;
+      opacity: 0.6;
+    }
+    
+    body::before {
+      width: 300px;
+      height: 300px;
+      background: #7fbfff;
+      top: -100px;
+      left: -100px;
+      animation: float 8s ease-in-out infinite;
+    }
+    
+    body::after {
+      width: 200px;
+      height: 200px;
+      background: #b2f0e6;
+      bottom: -50px;
+      right: -50px;
+      animation: float 10s ease-in-out infinite reverse;
+    }
+    /* Enhanced Frutiger Aero buttons */
+    button, .aanpas-btn, #manual-plus-btn {
+      background: linear-gradient(145deg, rgba(255,255,255,0.9) 0%, #8fd3fe 100%);
+      border: none;
+      border-radius: 18px;
+      box-shadow: 0 4px 15px rgba(80,180,240,0.25), 
+                  0 1.5px 0 rgba(255,255,255,0.8) inset,
+                  0 -2px 8px rgba(80,180,240,0.1) inset;
+      color: #1767a8;
+      font-weight: 600;
+      font-size: 1.1em;
+      padding: 12px 24px;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      outline: none;
       cursor: pointer;
-      z-index: 2;
+      margin: 10px 0;
+      position: relative;
+      overflow: hidden;
+      z-index: 1;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    button:hover, .aanpas-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(80,180,240,0.35), 
+                  0 2px 0 rgba(255,255,255,0.8) inset,
+                  0 -2px 12px rgba(80,180,240,0.15) inset;
+      animation: pulse 1.5s infinite;
+    }
+    
+    button:active, .aanpas-btn:active {
+      transform: translateY(1px);
+      box-shadow: 0 2px 8px rgba(80,180,240,0.2), 
+                  0 1px 0 rgba(255,255,255,0.6) inset,
+                  0 -1px 6px rgba(80,180,240,0.1) inset;
+    }
+    
+    /* Button shine effect */
+    button::after, .aanpas-btn::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.4),
+        transparent
+      );
+      transition: 0.5s;
+      z-index: -1;
+    }
+    
+    button:hover::after, .aanpas-btn:hover::after {
+      left: 100%;
+    }
+    button:active, .aanpas-btn:active, #manual-plus-btn:active {
+      background: linear-gradient(180deg, #d1f3ff 0%, #8fd3fe 100%);
+      box-shadow: 0 1px 6px 0 rgba(80,180,240,0.22);
+    }
+    #manual-plus-btn {
+      position: fixed;
+      right: 32px;
+      bottom: 72px;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #8fd3fe 0%, #b2f0e6 100%);
+      color: #fff;
+      font-size: 2.5em;
+      box-shadow: 0 8px 32px rgba(73, 181, 231, 0.4),
+                  0 4px 16px rgba(73, 181, 231, 0.3),
+                  0 2px 0 rgba(255, 255, 255, 0.7) inset,
+                  0 -2px 8px rgba(0, 0, 0, 0.1) inset;
+      border: 2px solid rgba(255, 255, 255, 0.6);
+      z-index: 900;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      transform: translateZ(0);
+      animation: float 3s ease-in-out infinite, glow 4s ease-in-out infinite;
+      overflow: hidden;
+    }
+    
+    #manual-plus-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 12px 40px rgba(73, 181, 231, 0.5),
+                  0 6px 20px rgba(73, 181, 231, 0.35),
+                  0 2px 0 rgba(255, 255, 255, 0.8) inset,
+                  0 -4px 12px rgba(0, 0, 0, 0.1) inset;
+      animation: float 3s ease-in-out infinite, glow 4s ease-in-out infinite;
+    }
+    
+    #manual-plus-btn:active {
+      transform: translateY(2px) scale(0.98);
+      box-shadow: 0 4px 16px rgba(73, 181, 231, 0.35),
+                  0 2px 8px rgba(73, 181, 231, 0.25),
+                  0 1px 0 rgba(255, 255, 255, 0.6) inset,
+                  0 -2px 6px rgba(0, 0, 0, 0.1) inset;
+    }
+    
+    /* Plus icon animation */
+    #manual-plus-btn::before {
+      content: '+';
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.3s ease;
+    }
+    
+    #manual-plus-btn:hover::before {
+      transform: rotate(90deg);
+    }
+    #manual-plus-btn:active {
+      background: linear-gradient(145deg, #b2f0e6 0%, #8fd3fe 100%);
     }
     h1 {
       text-align: center;
+      font-size: 2.3em;
+      letter-spacing: 1px;
+      font-weight: 700;
+      color: #2c3e50;
+      text-shadow: 0 2px 12px #b2f0e6, 0 1.5px 0 #fff;
+      margin-bottom: 30px;
     }
-    textarea, select, button {
+    textarea, select, input[type="text"], input[type="date"], input[type="time"] {
       width: 100%;
       margin-top: 10px;
-      font-size: 16px;
-      padding: 10px;
+      font-size: 1.08em;
+      padding: 15px 18px;
+      border-radius: 16px;
+      border: 1.5px solid rgba(120, 200, 255, 0.3);
+      background: rgba(255, 255, 255, 0.8);
+      box-shadow: 0 4px 20px rgba(80, 180, 240, 0.1),
+                  0 1.5px 0 rgba(255, 255, 255, 0.8) inset,
+                  0 -1px 6px rgba(80, 180, 240, 0.05) inset;
+      outline: none;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      margin-bottom: 12px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      font-family: 'Segoe UI', 'Frutiger', 'Arial', sans-serif;
+    }
+    
+    textarea:focus, select:focus, 
+    input[type="text"]:focus, 
+    input[type="date"]:focus, 
+    input[type="time"]:focus {
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 6px 24px rgba(80, 180, 240, 0.2),
+                  0 2px 0 rgba(255, 255, 255, 0.9) inset,
+                  0 -2px 10px rgba(80, 180, 240, 0.1) inset;
+      border-color: rgba(80, 180, 240, 0.6);
+      transform: translateY(-1px);
+    }
+    
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+    
+    /* Custom select arrow */
+    select {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231767a8'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 15px center;
+      background-size: 20px;
+      padding-right: 45px;
+    }
+    textarea:focus, select:focus {
+      background: rgba(255,255,255,0.95);
+      box-shadow: 0 2px 14px 0 rgba(80,180,240,0.15);
     }
     #kleur, #duur {
       margin-bottom: 20px;
+      background: rgba(255,255,255,0.8);
+      border-radius: 15px;
+      box-shadow: 0 1.5px 8px 0 rgba(80,180,240,0.08);
     }
     label {
-      font-weight: bold;
+      font-weight: 600;
+      color: #1a5d8a;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: color 0.2s ease;
     }
-    #output {
+    
+    label:hover {
+      color: #0f4c81;
+    }
+    
+    /* Custom checkbox styling */
+    input[type="checkbox"] {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.8);
+      border: 2px solid rgba(80, 180, 240, 0.6);
+      outline: none;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+      margin: 0;
+      vertical-align: middle;
+    }
+    
+    input[type="checkbox"]:checked {
+      background: #4CAF50;
+      border-color: #4CAF50;
+      animation: pulse 0.5s ease;
+    }
+    
+    input[type="checkbox"]:checked::after {
+      content: '✓';
+      position: absolute;
+      color: white;
+      font-size: 14px;
+      font-weight: bold;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+    
+    input[type="checkbox"]:hover {
+      border-color: #4CAF50;
+      box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+    }
+    /* Glass-morphism cards with animations */
+    #output, #meerdereOutput, .afspraak-bewerkbaar {
       margin-top: 20px;
-      background: #fff;
-      padding: 15px;
-      border: 1px solid #ccc;
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 22px;
+      box-shadow: 0 8px 32px 0 rgba(80, 180, 240, 0.15), 
+                  0 2px 0 0 rgba(255, 255, 255, 0.7) inset,
+                  0 -2px 12px rgba(80, 180, 240, 0.05) inset;
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      padding: 22px 20px;
+      backdrop-filter: blur(12px) saturate(1.4);
+      -webkit-backdrop-filter: blur(12px) saturate(1.4);
+      transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+      position: relative;
+      overflow: hidden;
+      animation: fadeIn 0.6s ease-out;
+      transform: translateZ(0);
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    #output:hover, #meerdereOutput:hover, .afspraak-bewerkbaar:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(80, 180, 240, 0.22), 
+                  0 3px 0 0 rgba(255, 255, 255, 0.8) inset,
+                  0 -3px 16px rgba(80, 180, 240, 0.1) inset;
+      background: rgba(255, 255, 255, 0.7);
+      border-color: rgba(120, 200, 255, 0.4);
+    }
+    
+    /* Glossy overlay effect */
+    #output::before, #meerdereOutput::before, .afspraak-bewerkbaar::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 30%;
+      background: linear-gradient(to bottom, 
+        rgba(255, 255, 255, 0.6) 0%, 
+        rgba(255, 255, 255, 0.2) 50%, 
+        transparent 100%);
+      border-radius: 22px 22px 0 0;
+      pointer-events: none;
+    }
+    .afspraak-bewerkbaar {
+      margin-bottom: 18px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 18px;
+      box-shadow: 0 6px 24px 0 rgba(80, 180, 240, 0.12), 
+                  0 2px 0 0 rgba(255, 255, 255, 0.7) inset,
+                  0 -2px 10px rgba(80, 180, 240, 0.08) inset;
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      padding: 18px 16px;
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    
+    .afspraak-bewerkbaar:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(80, 180, 240, 0.18),
+                  0 3px 0 0 rgba(255, 255, 255, 0.8) inset,
+                  0 -3px 14px rgba(80, 180, 240, 0.1) inset;
+      background: rgba(255, 255, 255, 0.8);
     }
     .veld {
       margin-bottom: 8px;
     }
+    #profileBox {
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 50px;
+      box-shadow: 0 4px 20px rgba(80, 180, 240, 0.15),
+                  0 2px 0 rgba(255, 255, 255, 0.7) inset,
+                  0 -2px 10px rgba(80, 180, 240, 0.08) inset;
+      padding: 10px 18px 10px 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 60px;
+      min-height: 60px;
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+      overflow: hidden;
+      position: relative;
+    }
+    
+    #profileBox:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(80, 180, 240, 0.2),
+                  0 3px 0 rgba(255, 255, 255, 0.8) inset,
+                  0 -3px 14px rgba(80, 180, 240, 0.1) inset;
+      background: rgba(255, 255, 255, 0.85);
+    }
+    
+    /* Profile image style */
+    #profileBox img {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    #profileBox:hover img {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
 
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: rgba(200, 230, 255, 0.3);
+      border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(145deg, #8fd3fe 0%, #b2f0e6 100%);
+      border-radius: 10px;
+      border: 2px solid rgba(255, 255, 255, 0.8);
+      transition: all 0.3s ease;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(145deg, #7bc7fd 0%, #9de3d9 100%);
+      box-shadow: 0 0 10px rgba(80, 180, 240, 0.5);
+    }
+    
+    /* Multiple output styling */
     #meerdereOutput {
-  margin-top: 20px;
-  background: #fff;
-  padding: 15px;
-  border: 1px solid #ccc;
-}
+      margin-top: 25px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 18px;
+      padding: 20px;
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      box-shadow: 0 6px 24px 0 rgba(80, 180, 240, 0.12), 
+                  0 2px 0 0 rgba(255, 255, 255, 0.7) inset;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    
+    #meerdereOutput:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(80, 180, 240, 0.18),
+                  0 3px 0 0 rgba(255, 255, 255, 0.8) inset;
+      background: rgba(255, 255, 255, 0.75);
+    }
 
   </style>
   <script src="https://apis.google.com/js/api.js"></script>
@@ -112,8 +532,58 @@
   </select>
 
   <label><input type="checkbox" id="heleDag"> Hele dag</label>
-  <button id="herkenButton" onclick="deleteAllAfspraken();parseEnToon();">🔍 Herken gegevens</button>
-  <button id="voegToeButton">📅 Voeg toe aan agenda</button>
+  <div class="button-group" style="display: flex; gap: 12px; margin: 20px 0;">
+    <button id="herkenButton" onclick="deleteAllAfspraken();parseEnToon();" style="flex: 1;">
+      <span class="button-icon">🔍</span>
+      <span class="button-text">Herken gegevens</span>
+    </button>
+    <button id="voegToeButton" style="flex: 1;">
+      <span class="button-icon">📅</span>
+      <span class="button-text">Voeg toe aan agenda</span>
+    </button>
+  </div>
+  
+  <style>
+    /* Button content animation */
+    .button-icon {
+      display: inline-block;
+      transition: transform 0.3s ease;
+    }
+    
+    button:hover .button-icon {
+      transform: scale(1.2);
+    }
+    
+    .button-text {
+      margin-left: 8px;
+      position: relative;
+      display: inline-block;
+    }
+    
+    /* Button hover effect */
+    button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at center, rgba(255,255,255,0.8) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 0;
+      border-radius: 18px;
+    }
+    
+    button:hover::before {
+      opacity: 0.4;
+    }
+    
+    /* Button press effect */
+    button:active {
+      transform: translateY(2px) !important;
+    }
+  </style>
 
   <div id="output" class="afspraken-lijst"></div>
   <div id="meerdereOutput"></div>
