@@ -13,12 +13,94 @@
   <!-- Web App Manifest -->
   <link rel="manifest" href="manifest.json">
   <style>
+    /* Dark/Light mode variables and container */
+    .container:not(.dark) {
+      --background: #f5f5f5;
+      --color: #323133;
+      --cardbackground: #ffffff;
+      --cardborder: #e9e9e9;
+      --cardtext: #323133;
+      --cardtext2: #3C3B3D;
+      --cardshadow: rgba(0,0,0,0.1);
+      --accent: #27ae60;
+    }
+    
+    .container.dark {
+      --background: #1C1B20;
+      --color: #F5F7FA;
+      --cardbackground: #222126;
+      --cardborder: #252429;
+      --cardtext: #F5F7FA;
+      --cardtext2: #E6E9ED;
+      --cardshadow: rgba(0,0,0,0.1);
+      --accent: #2ecc71;
+    }
+    
+    /* Clip animation for dark mode transition */
+    .clip {
+      z-index: 2;
+      position: fixed;
+      bottom: 5rem;
+      left: 1rem;
+      width: 0rem;
+      height: 0rem;
+      border-radius: 100%;
+      pointer-events: none;
+    }
+    
+    .clip.anim {
+      animation: open 1.0s ease-in;
+    }
+    
+    @keyframes open {
+      0% {
+        bottom: 5rem;
+        left: 1rem;
+        width: 0rem;
+        height: 0rem;
+        clip-path: circle(0rem at center);
+      }
+      100% {
+        bottom: calc(-250vmax + 5rem);
+        left: calc(-250vmax + 1rem);
+        width: 500vmax;
+        height: 500vmax;
+        clip-path: circle(100% at center);
+      }
+    }
+    
     body {
       font-family: sans-serif;
-      background-color: #f5f5f5;
-      max-width: 700px;
-      margin: auto;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow: auto;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--background);
+      color: var(--color);
       padding: 20px;
+      box-sizing: border-box;
+    }
+    
+    .container .content {
+      max-width: 700px;
+      width: 100%;
+    }
+    
+    [class*="card"] {
+      background: var(--cardbackground);
+      color: var(--cardtext);
+      border: 1px solid var(--cardborder);
+      box-shadow: 0 2px 8px var(--cardshadow);
     }
     /* Stijl voor de aanpas (edit) knop rechtsboven in een afspraakblok */
     .aanpas-btn {
@@ -45,6 +127,9 @@
       margin-top: 10px;
       font-size: 16px;
       padding: 10px;
+      background: var(--cardbackground);
+      color: var(--cardtext);
+      border: 1px solid var(--cardborder);
     }
     #kleur, #duur {
       margin-bottom: 20px;
@@ -54,9 +139,9 @@
     }
     #output {
       margin-top: 20px;
-      background: #fff;
+      background: var(--cardbackground);
       padding: 15px;
-      border: 1px solid #ccc;
+      border: 1px solid var(--cardborder);
     }
     .veld {
       margin-bottom: 8px;
@@ -64,253 +149,447 @@
 
     #meerdereOutput {
   margin-top: 20px;
-  background: #fff;
+  background: var(--cardbackground);
   padding: 15px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--cardborder);
 }
 
+.afspraken-lijst {
+  margin-top: 20px;
+}
+
+.afspraak-item {
+  background: var(--cardbackground);
+  border: 1px solid var(--cardborder);
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 4px var(--cardshadow);
+  color: var(--cardtext);
+}
+
+.afspraak-item p {
+  margin: 5px 0;
+  color: var(--cardtext2);
+}
+
+/* Dark mode toggle button */
+.darkmode {
+  position: fixed;
+  bottom: 5rem;
+  left: 1rem;
+  font-size: 1.75rem;
+  padding: 1rem;
+  margin: 1px;
+  border-radius: 100%;
+  background: var(--cardbackground);
+  border: 1px solid var(--accent) !important;
+  box-shadow: 0 0 1rem -0.25rem var(--accent), inset 0 0 1rem -0.75rem var(--accent);
+  color: var(--accent);
+  cursor: pointer;
+  transition: 0.25s -0.05s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1002;
+}
+
+.darkmode:hover {
+  box-shadow: 0 0 1rem -0.25rem var(--accent), inset 0 0 1rem -0.25rem var(--accent);
+}
+
+/* ANIMATIE STARTPUNT: Pas de top/right waarden hieronder aan voor de positie */
+#animatie-startpunt {
+  position: absolute;
+  top: 21px;
+  right: 321px;
+  /* Voeg hier meer styling toe indien gewenst */
+}
   </style>
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
-  <div id="profileBox" style="position:fixed;top:20px;right:32px;z-index:1000;"></div>
-  <h1>Agenda Tool30</h1>
-  <div id="g_id_onload"
-     data-client_id="YOUR_CLIENT_ID"
-     data-callback="handleCredentialResponse"
-     data-auto_prompt="false">
-  </div>
-  <button id="loginButton">Log in met Google</button>
-  <p id="status">Niet ingelogd</p>
+<div id="container" class="container">
+  <div id="afspraak-content">
+    <div class="content">
+      <div id="profileBox" style="position:fixed;top:20px;right:32px;z-index:1000;"></div>
+      <h1>Agenda Tool30</h1>
+      <div id="g_id_onload"
+         data-client_id="YOUR_CLIENT_ID"
+         data-callback="handleCredentialResponse"
+         data-auto_prompt="false">
+      </div>
+      <button id="loginButton">Log in met Google</button>
+      <p id="status">Niet ingelogd</p>
 
-  <textarea id="inputText" rows="4" placeholder="Bijv: fysio maandag half drie of 'kapper 5 juli 14:00'"></textarea>
+      <textarea id="inputText" rows="4" placeholder="Bijv: fysio maandag half drie of 'kapper 5 juli 14:00'"></textarea>
 
-  <label for="kleur">Kies kleur:</label>
-  <select id="kleur">
-    <option value="random" selected>🎲 Willekeurig</option>
-    <option value="11">❤️ Rood (Tomaat)</option>
-    <option value="6">🟧 Oranje (Mandarijn)</option>
-    <option value="5">💛 Geel (Zonnebloem)</option>
-    <option value="10">💚 Donkergroen (Basilicum)</option>
-    <option value="2">💚 Lichtgroen (Salie)</option>
-    <option value="9">💙 Blauw (Pauw)</option>
-    <option value="7">🫐 Bosbes</option>
-    <option value="3">💜 Lavendel</option>
-    <option value="4">🍇 Paars (Druif)</option>
-    <option value="1">💗 Roze (Flamingo)</option>
-    <option value="8">⚫ Grijs (Grafiet)</option>
-  </select>
+      <label for="kleur">Kies kleur:</label>
+      <select id="kleur">
+        <option value="random" selected>🎲 Willekeurig</option>
+        <option value="11">❤️ Rood (Tomaat)</option>
+        <option value="6">🟧 Oranje (Mandarijn)</option>
+        <option value="5">💛 Geel (Zonnebloem)</option>
+        <option value="10">💚 Donkergroen (Basilicum)</option>
+        <option value="2">💚 Lichtgroen (Salie)</option>
+        <option value="9">💙 Blauw (Pauw)</option>
+        <option value="7">🫐 Bosbes</option>
+        <option value="3">💜 Lavendel</option>
+        <option value="4">🍇 Paars (Druif)</option>
+        <option value="1">💗 Roze (Flamingo)</option>
+        <option value="8">⚫ Grijs (Grafiet)</option>
+      </select>
 
-  <label for="duur">Kies duur:</label>
-  <select id="duur">
-    <option value="60" selected>⏱ 1 uur</option>
-    <option value="30">🕧 30 minuten</option>
-    <option value="45">🕐 45 minuten</option>
-    <option value="90">🕜 1,5 uur</option>
-    <option value="120">🕑 2 uur</option>
-  </select>
+      <label for="duur">Kies duur:</label>
+      <select id="duur">
+        <option value="60" selected>⏱ 1 uur</option>
+        <option value="30">🕧 30 minuten</option>
+        <option value="45">🕐 45 minuten</option>
+        <option value="90">🕜 1,5 uur</option>
+        <option value="120">🕑 2 uur</option>
+      </select>
 
-  <label><input type="checkbox" id="heleDag"> Hele dag</label>
-  <button id="herkenButton" onclick="deleteAllAfspraken();parseEnToon();">🔍 Herken gegevens</button>
-  <button id="voegToeButton">📅 Voeg toe aan agenda</button>
+      <label><input type="checkbox" id="heleDag"> Hele dag</label>
+      <button id="herkenButton" onclick="deleteAllAfspraken();parseEnToon();">🔍 Herken gegevens</button>
+      <button id="voegToeButton">📅 Voeg toe aan agenda</button>
 
-  <div id="output" class="afspraken-lijst"></div>
-  <div id="meerdereOutput"></div>
+      <div id="output" class="afspraken-lijst"></div>
+      <div id="meerdereOutput"></div>
 
-  <template id="afspraak-edit-template">
-    <div class="afspraak-bewerkbaar" data-index="">
-      <label>Titel: <input type="text" class="edit-titel" /></label><br>
-      <label>Datum: <input type="date" class="edit-datum" /></label><br>
-      <label>Tijd: <input type="time" class="edit-tijd" /></label><br>
-      <label>Kleur:
-        <select class="edit-kleur">
-          <option value="random">🎲 Willekeurig</option>
-          <option value="11">❤️ Rood (Tomaat)</option>
-          <option value="6">🟧 Oranje (Mandarijn)</option>
-          <option value="5">💛 Geel (Zonnebloem)</option>
-          <option value="10">💚 Donkergroen (Basilicum)</option>
-          <option value="2">💚 Lichtgroen (Salie)</option>
-          <option value="9">💙 Blauw (Pauw)</option>
-          <option value="7">🫐 Bosbes</option>
-          <option value="3">💜 Lavendel</option>
-          <option value="4">🍇 Paars (Druif)</option>
-          <option value="1">💗 Roze (Flamingo)</option>
-          <option value="8">⚫ Grijs (Grafiet)</option>
-        </select>
-      </label><br>
-      <label>Duur:
-        <select class="edit-duur">
-          <option value="60">⏱ 1 uur</option>
-          <option value="30">🕧 30 minuten</option>
-          <option value="45">🕐 45 minuten</option>
-          <option value="90">🕜 1,5 uur</option>
-          <option value="120">🕑 2 uur</option>
-        </select>
-      </label><br>
-      <label><input type="checkbox" class="edit-heledag"> Hele dag</label><br>
-      <button class="save-edit" style="background:#2ecc40;color:white;">Opslaan</button>
+      <template id="afspraak-edit-template">
+        <div class="afspraak-bewerkbaar" data-index="">
+          <label>Titel: <input type="text" class="edit-titel" /></label><br>
+          <label>Datum: <input type="date" class="edit-datum" /></label><br>
+          <label>Tijd: <input type="time" class="edit-tijd" /></label><br>
+          <label>Kleur:
+            <select class="edit-kleur">
+              <option value="random">🎲 Willekeurig</option>
+              <option value="11">❤️ Rood (Tomaat)</option>
+              <option value="6">🟧 Oranje (Mandarijn)</option>
+              <option value="5">💛 Geel (Zonnebloem)</option>
+              <option value="10">💚 Donkergroen (Basilicum)</option>
+              <option value="2">💚 Lichtgroen (Salie)</option>
+              <option value="9">💙 Blauw (Pauw)</option>
+              <option value="7">🫐 Bosbes</option>
+              <option value="3">💜 Lavendel</option>
+              <option value="4">🍇 Paars (Druif)</option>
+              <option value="1">💗 Roze (Flamingo)</option>
+              <option value="8">⚫ Grijs (Grafiet)</option>
+            </select>
+          </label><br>
+          <label>Duur:
+            <select class="edit-duur">
+              <option value="60">⏱ 1 uur</option>
+              <option value="30">🕧 30 minuten</option>
+              <option value="45">🕐 45 minuten</option>
+              <option value="90">🕜 1,5 uur</option>
+              <option value="120">🕑 2 uur</option>
+            </select>
+          </label><br>
+          <label><input type="checkbox" class="edit-heledag"> Hele dag</label><br>
+          <button class="save-edit" style="background:#2ecc40;color:white;">Opslaan</button>
+        </div>
+      </template>
+
+      <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
+      <script src="https://accounts.google.com/gsi/client" async defer></script>
+      <script>
+        let tokenClient;
+        let accessToken = null;
+
+        function gapiLoaded() {
+          gapi.load('client', initializeGapiClient);
+        }
+
+        async function initializeGapiClient() {
+          await gapi.client.init({
+            apiKey: '',
+            discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
+          });
+        }
+
+
+
+        function handleAuthClick() {
+          if (tokenClient) {
+            tokenClient.requestAccessToken();
+          } else {
+            alert("Google auth is nog niet geladen.");
+          }
+        }
+
+        function parseTextToEvent(text) {
+          // Simpele parser: zoekt tijd en datum in tekst
+          const tijdRegex = /(\d{1,2}):(\d{2})/;
+          const dateRegex = /(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/;
+          let startH = 0, startM = 0;
+          let datum = new Date();
+          let tijdMatch = text.match(tijdRegex);
+          if (tijdMatch) {
+            startH = parseInt(tijdMatch[1]);
+            startM = parseInt(tijdMatch[2]);
+          }
+          let dateMatch = text.match(dateRegex);
+          if (dateMatch) {
+            let jaar = dateMatch[3] ? parseInt(dateMatch[3]) : datum.getFullYear();
+            let maand = parseInt(dateMatch[2]) - 1;
+            let dag = parseInt(dateMatch[1]);
+            datum = new Date(jaar, maand, dag, startH, startM);
+          } else {
+            datum.setHours(startH, startM, 0, 0);
+          }
+          return { titel: text, datum };
+        }
+
+        async function addEvent() {
+          if (!accessToken) {
+            alert("Log eerst in met Google.");
+            return;
+          }
+          const text = document.getElementById('inputText').value;
+          const kleur = document.getElementById('kleur').value;
+          const duur = parseInt(document.getElementById('duur').value);
+          const heleDag = document.getElementById('heleDag').checked;
+          // Detecteer of er meerdere afspraken zijn
+          let meerdereAfspraken = false;
+          let tijdMatches = text.match(/(\d{1,2}[:.]\d{2})/g);
+          let dagRegex = /(zondag|maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag)/i;
+          let dagMatches = text.match(new RegExp(dagRegex, 'gi'));
+          let datumMatches = text.match(/\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b/g);
+          if ((tijdMatches && tijdMatches.length > 1) || (dagMatches && dagMatches.length > 1) || (datumMatches && datumMatches.length > 1)) {
+            meerdereAfspraken = true;
+          }
+          let afspraken = [];
+          if (meerdereAfspraken) {
+            if (typeof window.parseMeerdereAfsprakenInRegel !== 'function') {
+              alert('De functie parseMeerdereAfsprakenInRegel is niet beschikbaar. Zorg dat script_tool.js correct wordt geladen.');
+              return;
+            }
+            afspraken = window.parseMeerdereAfsprakenInRegel(text);
+            // Hoofd-titel bepalen voor fallback
+            let dagNamen = ["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
+            let dagRegex2 = dagNamen.join("|");
+            let eersteBlok = text.split(new RegExp(`[\r\n\.]+|, (?=${dagRegex2})`, 'i')).find(r => new RegExp(`\\b(${dagRegex2})\\b`, 'i').test(r));
+            let hoofdTitel = null;
+            if (eersteBlok) {
+              let dagMatch = eersteBlok.match(new RegExp(`^(.*?)\\b(${dagRegex2})\\b`, 'i'));
+              if (dagMatch && dagMatch[1].trim().length > 0) {
+                hoofdTitel = window.titelopschoner ? window.titelopschoner(dagMatch[1].trim()) : dagMatch[1].trim();
+              }
+            }
+            // Fallback hoofd-titel toepassen
+            afspraken = afspraken.map(afspraak => {
+              let schoneTitel = window.titelopschoner ? window.titelopschoner(afspraak.titel) : afspraak.titel;
+              if (!schoneTitel || schoneTitel === "Onbekende afspraak") {
+                schoneTitel = hoofdTitel ? hoofdTitel : "Onbekende afspraak";
+              }
+              return { ...afspraak, titel: schoneTitel };
+            });
+          } else {
+            // Simpele parser voor 1 afspraak
+            let afspraak = window.parseTextToEvent ? window.parseTextToEvent(text) : { titel: text, datum: new Date() };
+            afspraak.titel = window.titelopschoner ? window.titelopschoner(afspraak.titel) : afspraak.titel;
+            afspraken = [afspraak];
+          }
+          if (!afspraken.length) {
+            alert('Geen afspraken gevonden in de tekst.');
+            return;
+          }
+          let toegevoegd = 0;
+          let details = '';
+          for (const afspraak of afspraken) {
+            let datum = afspraak.datum instanceof Date ? afspraak.datum : new Date(afspraak.datum);
+            let start, end;
+            if (heleDag) {
+              start = { date: datum.toISOString().slice(0,10) };
+              end = { date: datum.toISOString().slice(0,10) };
+            } else {
+              let tijdSplit = (afspraak.tijd||'').split(':');
+              if (tijdSplit.length === 2) {
+                datum.setHours(parseInt(tijdSplit[0]), parseInt(tijdSplit[1]), 0, 0);
+              }
+              start = { dateTime: datum.toISOString(), timeZone: 'Europe/Amsterdam' };
+              let endDate = new Date(datum.getTime() + duur*60000);
+              end = { dateTime: endDate.toISOString(), timeZone: 'Europe/Amsterdam' };
+            }
+            const event = {
+              summary: afspraak.titel || 'Afspraak',
+              start,
+              end,
+              colorId: kleur === 'random' ? undefined : kleur
+            };
+            try {
+              await gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
+              toegevoegd++;
+              details += `\nTitel: ${event.summary}\nDatum: ${heleDag ? start.date : datum.toLocaleString()}\nTijd: ${afspraak.tijd || ''}\nKleur: ${kleur}\nDuur: ${duur} min\n---`;
+            } catch (e) {
+              details += `\nFout bij toevoegen van afspraak: ${event.summary} (${e.message})`;
+            }
+          }
+          alert(`${toegevoegd} afspraak/afspraken toegevoegd aan je Google Agenda!${details}`);
+        }
+      </script>
+      <script src="script_tool.js"></script>
     </div>
-  </template>
-
-  <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script>
-    let tokenClient;
-    let accessToken = null;
-
-    function gapiLoaded() {
-      gapi.load('client', initializeGapiClient);
-    }
-
-    async function initializeGapiClient() {
-      await gapi.client.init({
-        apiKey: '',
-        discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
-      });
-    }
-
-
-
-    function handleAuthClick() {
-      if (tokenClient) {
-        tokenClient.requestAccessToken();
-      } else {
-        alert("Google auth is nog niet geladen.");
-      }
-    }
-
-    function parseTextToEvent(text) {
-      // Simpele parser: zoekt tijd en datum in tekst
-      const tijdRegex = /(\d{1,2}):(\d{2})/;
-      const dateRegex = /(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/;
-      let startH = 0, startM = 0;
-      let datum = new Date();
-      let tijdMatch = text.match(tijdRegex);
-      if (tijdMatch) {
-        startH = parseInt(tijdMatch[1]);
-        startM = parseInt(tijdMatch[2]);
-      }
-      let dateMatch = text.match(dateRegex);
-      if (dateMatch) {
-        let jaar = dateMatch[3] ? parseInt(dateMatch[3]) : datum.getFullYear();
-        let maand = parseInt(dateMatch[2]) - 1;
-        let dag = parseInt(dateMatch[1]);
-        datum = new Date(jaar, maand, dag, startH, startM);
-      } else {
-        datum.setHours(startH, startM, 0, 0);
-      }
-      return { titel: text, datum };
-    }
-
-    async function addEvent() {
-      if (!accessToken) {
-        alert("Log eerst in met Google.");
-        return;
-      }
-      const text = document.getElementById('inputText').value;
-      const kleur = document.getElementById('kleur').value;
-      const duur = parseInt(document.getElementById('duur').value);
-      const heleDag = document.getElementById('heleDag').checked;
-      // Detecteer of er meerdere afspraken zijn
-      let meerdereAfspraken = false;
-      let tijdMatches = text.match(/(\d{1,2}[:.]\d{2})/g);
-      let dagRegex = /(zondag|maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag)/i;
-      let dagMatches = text.match(new RegExp(dagRegex, 'gi'));
-      let datumMatches = text.match(/\b\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?\b/g);
-      if ((tijdMatches && tijdMatches.length > 1) || (dagMatches && dagMatches.length > 1) || (datumMatches && datumMatches.length > 1)) {
-        meerdereAfspraken = true;
-      }
-      let afspraken = [];
-      if (meerdereAfspraken) {
-        if (typeof window.parseMeerdereAfsprakenInRegel !== 'function') {
-          alert('De functie parseMeerdereAfsprakenInRegel is niet beschikbaar. Zorg dat script_tool.js correct wordt geladen.');
-          return;
-        }
-        afspraken = window.parseMeerdereAfsprakenInRegel(text);
-        // Hoofd-titel bepalen voor fallback
-        let dagNamen = ["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
-        let dagRegex2 = dagNamen.join("|");
-        let eersteBlok = text.split(new RegExp(`[\r\n\.]+|, (?=${dagRegex2})`, 'i')).find(r => new RegExp(`\\b(${dagRegex2})\\b`, 'i').test(r));
-        let hoofdTitel = null;
-        if (eersteBlok) {
-          let dagMatch = eersteBlok.match(new RegExp(`^(.*?)\\b(${dagRegex2})\\b`, 'i'));
-          if (dagMatch && dagMatch[1].trim().length > 0) {
-            hoofdTitel = window.titelopschoner ? window.titelopschoner(dagMatch[1].trim()) : dagMatch[1].trim();
+  </div>
+  <div id="agenda-content" style="display:none;">
+    <div class="content">
+      <h1>Agenda</h1>
+      <div id="week-agenda">
+        <p>Even geduld... afspraken laden...</p>
+      </div>
+      <button id="agenda-refresh-btn" style="margin-top:1em;">🔄 Vernieuw</button>
+      <script>
+        async function loadWeekAgenda() {
+          const agendaDiv = document.getElementById('week-agenda');
+          agendaDiv.innerHTML = '<p>Even geduld... afspraken laden...</p>';
+          if (!window.gapi || !window.gapi.client || !window.accessToken) {
+            agendaDiv.innerHTML = '<p>Log eerst in met Google.</p>';
+            return;
+          }
+          // Bereken begin/eind van de huidige week (maandag t/m zondag)
+          const now = new Date();
+          const day = now.getDay(); // 0=zon, 1=maa, ...
+          const diffToMonday = (day === 0 ? -6 : 1) - day;
+          const monday = new Date(now);
+          monday.setDate(now.getDate() + diffToMonday);
+          monday.setHours(0,0,0,0);
+          const sunday = new Date(monday);
+          sunday.setDate(monday.getDate() + 6);
+          sunday.setHours(23,59,59,999);
+          // Ophalen
+          try {
+            const res = await gapi.client.calendar.events.list({
+              calendarId: 'primary',
+              timeMin: monday.toISOString(),
+              timeMax: sunday.toISOString(),
+              singleEvents: true,
+              orderBy: 'startTime'
+            });
+            const events = res.result.items || [];
+            if (events.length === 0) {
+              agendaDiv.innerHTML = '<p>Geen afspraken voor deze week.</p>';
+              return;
+            }
+            // Sorteer en toon
+            let html = '<ul style="list-style:none;padding:0;">';
+            for (const ev of events) {
+              let start = ev.start.dateTime || ev.start.date;
+              let end = ev.end.dateTime || ev.end.date;
+              let tijd = ev.start.dateTime ?
+                (new Date(ev.start.dateTime)).toLocaleString('nl-NL', { weekday:'short', hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit' }) :
+                (new Date(ev.start.date)).toLocaleDateString('nl-NL', { weekday:'short', day:'2-digit', month:'2-digit' });
+              html += `<li style="margin-bottom:0.5em;padding:0.5em 0.7em;background:#f6f8fa;border-radius:8px;">
+                <b>${ev.summary || '(geen titel)'}</b><br>
+                <span style="color:#555;">${tijd}</span>
+              </li>`;
+            }
+            html += '</ul>';
+            agendaDiv.innerHTML = html;
+          } catch (e) {
+            agendaDiv.innerHTML = '<p>Fout bij laden van afspraken: ' + e.message + '</p>';
           }
         }
-        // Fallback hoofd-titel toepassen
-        afspraken = afspraken.map(afspraak => {
-          let schoneTitel = window.titelopschoner ? window.titelopschoner(afspraak.titel) : afspraak.titel;
-          if (!schoneTitel || schoneTitel === "Onbekende afspraak") {
-            schoneTitel = hoofdTitel ? hoofdTitel : "Onbekende afspraak";
-          }
-          return { ...afspraak, titel: schoneTitel };
-        });
-      } else {
-        // Simpele parser voor 1 afspraak
-        let afspraak = window.parseTextToEvent ? window.parseTextToEvent(text) : { titel: text, datum: new Date() };
-        afspraak.titel = window.titelopschoner ? window.titelopschoner(afspraak.titel) : afspraak.titel;
-        afspraken = [afspraak];
-      }
-      if (!afspraken.length) {
-        alert('Geen afspraken gevonden in de tekst.');
-        return;
-      }
-      let toegevoegd = 0;
-      let details = '';
-      for (const afspraak of afspraken) {
-        let datum = afspraak.datum instanceof Date ? afspraak.datum : new Date(afspraak.datum);
-        let start, end;
-        if (heleDag) {
-          start = { date: datum.toISOString().slice(0,10) };
-          end = { date: datum.toISOString().slice(0,10) };
-        } else {
-          let tijdSplit = (afspraak.tijd||'').split(':');
-          if (tijdSplit.length === 2) {
-            datum.setHours(parseInt(tijdSplit[0]), parseInt(tijdSplit[1]), 0, 0);
-          }
-          start = { dateTime: datum.toISOString(), timeZone: 'Europe/Amsterdam' };
-          let endDate = new Date(datum.getTime() + duur*60000);
-          end = { dateTime: endDate.toISOString(), timeZone: 'Europe/Amsterdam' };
-        }
-        const event = {
-          summary: afspraak.titel || 'Afspraak',
-          start,
-          end,
-          colorId: kleur === 'random' ? undefined : kleur
-        };
-        try {
-          await gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
-          toegevoegd++;
-          details += `\nTitel: ${event.summary}\nDatum: ${heleDag ? start.date : datum.toLocaleString()}\nTijd: ${afspraak.tijd || ''}\nKleur: ${kleur}\nDuur: ${duur} min\n---`;
-        } catch (e) {
-          details += `\nFout bij toevoegen van afspraak: ${event.summary} (${e.message})`;
-        }
-      }
-      alert(`${toegevoegd} afspraak/afspraken toegevoegd aan je Google Agenda!${details}`);
-    }
-  </script>
-  <script src="script_tool.js"></script>
+        document.getElementById('nav-agenda').addEventListener('click', loadWeekAgenda);
+        document.getElementById('agenda-refresh-btn').addEventListener('click', loadWeekAgenda);
+      </script>
+    </div>
+  </div>
   <!-- Zwevende + knop -->
   <button id="manual-plus-btn" title="Nieuwe afspraak" style="position:fixed;right:32px;bottom:72px;width:56px;height:56px;border-radius:50%;background:#27ae60;color:#fff;font-size:2.2em;box-shadow:0 2px 8px #0003;z-index:900;border:none;cursor:pointer;">+</button>
 
-  <!-- Agenda weekoverzicht (verborgen bij start) -->
-    <div id="agendaView" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#181818;z-index:1001;overflow-y:auto;overflow-x:hidden;">
-      <div id="weekAgendaContainer"></div>
-    </div>
-
   <!-- Bottom navigation bar -->
-  <nav id="bottom-nav" style="position:fixed;bottom:0;left:0;width:100vw;height:60px;background:#fff;box-shadow:0 -2px 8px #0002;display:flex;justify-content:space-around;align-items:center;z-index:1001;">
-    <button id="nav-afspraak" style="background:none;border:none;outline:none;font-size:1.1em;display:flex;flex-direction:column;align-items:center;color:#27ae60;flex:1;">
+  <nav id="bottom-nav" style="position:fixed;bottom:0;left:0;width:100vw;height:60px;background:var(--cardbackground);box-shadow:0 -2px 8px var(--cardshadow);display:flex;justify-content:center;align-items:center;z-index:1001;border-top:1px solid var(--cardborder);">
+    <button id="nav-afspraak" style="background:none;border:none;outline:none;font-size:1.1em;display:flex;flex-direction:column;align-items:center;color:var(--accent);">
       <span style="font-size:1.7em;">📅</span>
       Afspraak maken
     </button>
-    <button id="nav-agenda" style="background:none;border:none;outline:none;font-size:1.1em;display:flex;flex-direction:column;align-items:center;color:#888;flex:1;">
+    <button id="nav-agenda" style="background:none;border:none;outline:none;font-size:1.1em;display:flex;flex-direction:column;align-items:center;color:var(--accent);margin-left:2em;">
       <span style="font-size:1.7em;">🗓️</span>
       Agenda
     </button>
   </nav>
+  <script>
+    document.getElementById('nav-afspraak').onclick = function() {
+      document.getElementById('afspraak-content').style.display = '';
+      document.getElementById('agenda-content').style.display = 'none';
+    };
+    document.getElementById('nav-agenda').onclick = function() {
+      document.getElementById('afspraak-content').style.display = 'none';
+      document.getElementById('agenda-content').style.display = '';
+    };
+  </script>
+  <!-- ANIMATIE STARTPUNT: Pas de top/right waarden hieronder aan voor de positie -->
+  <div id="animatie-startpunt"></div>
+  
+  <!-- Dark mode toggle button -->
+  <div class="darkmode card-b" id="darkmode-btn" title="Toggle dark mode">
+    🌙
+  </div>
+</div>
+
+<!-- Clip element for dark mode animation -->
+<div class="clip"></div>
+
+<!-- Dark mode toggle functionality -->
+<script>
+  let buttonenabled = true, scroll = 0;
+
+  document.addEventListener('click', function(e) {
+    const darkBtn = e.target.closest('.darkmode');
+    if (darkBtn) {
+      if (!buttonenabled) return;
+      buttonenabled = false;
+
+      const container = document.querySelector('.container');
+      const clip = document.querySelector('.clip');
+
+      // Zet de .clip-div op dezelfde plek als het animatie-startpunt
+      const animStart = document.getElementById('animatie-startpunt');
+      if (animStart) {
+        const rect = animStart.getBoundingClientRect();
+        clip.style.top = rect.top + 'px';
+        clip.style.left = rect.left + 'px';
+        clip.style.bottom = '';
+        clip.style.right = '';
+        clip.style.width = '0rem';
+        clip.style.height = '0rem';
+        clip.style.position = 'fixed';
+        clip.style.transform = '';
+      } else {
+        // fallback: oude positie
+        clip.style.bottom = '5rem';
+        clip.style.left = '1rem';
+        clip.style.width = '0rem';
+        clip.style.height = '0rem';
+        clip.style.position = 'fixed';
+        clip.style.removeProperty('top');
+        clip.style.removeProperty('right');
+        clip.style.transform = '';
+      }
+
+      // Clone de container
+      clip.innerHTML = container.outerHTML;
+      const clipContainer = clip.querySelector('.container');
+      clipContainer.classList.toggle('dark');
+
+      // Update het icoon
+      const clipToggle = clip.querySelector('.darkmode');
+      clipToggle.textContent = clipContainer.classList.contains('dark') ? '☀️' : '🌙';
+
+      // Start animatie
+      clip.classList.add('anim');
+
+      setTimeout(function () {
+        container.replaceWith(clipContainer);
+        clip.innerHTML = '';
+        clip.classList.remove('anim');
+        buttonenabled = true;
+      }, 1000);
+    }
+  });
+</script>
 
 </body>
 </html>
