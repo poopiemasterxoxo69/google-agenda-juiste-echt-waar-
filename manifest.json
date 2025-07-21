@@ -3,6 +3,5 @@
   "short_name": "Agenda Tool",
   "start_url": "./",
   "display": "standalone",
-  "theme_color": "#27ae60",
   "orientation": "portrait"
 }

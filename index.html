@@ -487,21 +487,10 @@ function herkenMetSpinner() {
     <span class="button-spinner"></span>
     🔍 Herken gegevens
   </button>
-  <button onclick="vibratePhone()" style="background:#27ae60;color:#fff;padding:0.7em 1.3em;border:none;border-radius:var(--radius);font-size:1em;margin-top:1em;">📳 Laat telefoon trillen</button>
   <button id="voegToeButton">
     <span class="button-spinner"></span>
     📅 Voeg toe aan agenda
   </button>
-
-  <script>
-  function vibratePhone() {
-    if (navigator.vibrate) {
-      navigator.vibrate([200, 100, 200]); // tril-patroon: tril, pauze, tril
-    } else {
-      alert('Vibratie wordt niet ondersteund op dit apparaat.');
-    }
-  }
-  </script>
 
   <div id="output" class="afspraken-lijst"></div>
  
