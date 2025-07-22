@@ -503,61 +503,6 @@ button::after, #voegToeButton::after, #herkenButton::after {
   opacity: 0.47;
 }
 
-@media (max-width: 600px) {
-  #agendaView {
-    padding: 0;
-    left: 0; top: 0;
-    width: 100vw;
-    height: 100vh;
-    border-radius: 0;
-    max-width: 100vw;
-    max-height: 100vh;
-    background: linear-gradient(145deg, #0d1f2d 0%, #162c40 20%, #1e3a56 45%, #285673 75%, #2e6a85 100%) !important;
-  }
-  .agenda-card-glass {
-    padding: 13px 8px 13px 8px;
-    margin-bottom: 12px;
-    border-radius: 14px;
-    font-size: 1em;
-  }
-  .agenda-header {
-    font-size: 1em !important;
-    padding: 0 8px !important;
-    border-radius: 14px 14px 0 0 !important;
-  }
-  .agenda {
-    grid-template-columns: 40px repeat(7,1fr) !important;
-    grid-template-rows: repeat(24, 38px) !important;
-    height: 60vh !important;
-    border-radius: 0 0 14px 14px !important;
-  }
-  .datum-bar, .allday-bar {
-    grid-template-columns: 40px repeat(7,1fr) !important;
-    font-size: 0.93em !important;
-    height: 30px !important;
-    border-radius: 0 !important;
-  }
-  .veld button, .aanpas-btn, .save-edit, .annuleer-btn {
-    font-size: 1.15em !important;
-    min-width: 38px;
-    min-height: 38px;
-    padding: 7px 0 !important;
-    border-radius: 10px !important;
-  }
-  .afspraak-titel {
-    font-size: 1em !important;
-    margin-bottom: 5px !important;
-  }
-  #output, #meerdereOutput {
-    padding: 5vw 2vw 14vw 2vw !important;
-    font-size: 1em;
-  }
-  .agenda-cel {
-    min-width: 0 !important;
-    padding: 0 !important;
-  }
-}
-
 </style>
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
