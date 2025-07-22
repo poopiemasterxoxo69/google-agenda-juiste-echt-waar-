@@ -201,7 +201,7 @@ function buildAgendaGrid() {
   const weekNum = getWeekNumber(monday);
   const header = document.createElement('div');
   header.className = 'agenda-header';
-  header.style.cssText = 'height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;background:#303134;color:#fff;font-size:17px;font-weight:bold;touch-action:none;-webkit-user-select:none;user-select:none;';
+  header.style.cssText = 'height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:linear-gradient(145deg, #0d1f2d 0%, #162c40 20%, #1e3a56 45%, #285673 75%, #2e6a85 100%);color:#cdefff;font-size:1.17em;font-weight:700;touch-action:none;-webkit-user-select:none;user-select:none;border-radius:20px 20px 0 0;box-shadow:0 8px 32px 0 rgba(80,180,240,0.16);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1.5px solid rgba(255,255,255,0.12);';
   const weekText = document.createElement('span');
   let label = '';
   if (weekOffset === 0) label = ' (deze week)';
@@ -220,7 +220,7 @@ function buildAgendaGrid() {
   // Datum-bar
   const datumBar = document.createElement('div');
   datumBar.className = 'datum-bar';
-  datumBar.style.cssText = 'display:grid;grid-template-columns:60px repeat(7,1fr);height:42px;background:#222;color:#bbb;font-size:15px;align-items:center;border-bottom:1px solid #333;position:sticky;top:48px;z-index:10;touch-action:none;-webkit-user-select:none;user-select:none;';
+  datumBar.style.cssText = 'display:grid;grid-template-columns:60px repeat(7,1fr);height:42px;background:rgba(30,50,80,0.55);color:#cdefff;font-size:1em;align-items:center;border-bottom:1.5px solid rgba(255,255,255,0.10);position:sticky;top:48px;z-index:10;touch-action:none;-webkit-user-select:none;user-select:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);';
   datumBar.appendChild(document.createElement('div'));
   const dagen = ['Ma','Di','Wo','Do','Vr','Za','Zo'];
   for (let i=0; i<7; ++i) {
@@ -236,7 +236,7 @@ function buildAgendaGrid() {
   // Hele dag-afspraken container
   const allDayBar = document.createElement('div');
   allDayBar.className = 'allday-bar';
-  allDayBar.style.cssText = 'display:grid;grid-template-columns:60px repeat(7,1fr);height:36px;align-items:center;background:#232323;border-bottom:1px solid #333;overflow-x:auto;white-space:nowrap;';
+  allDayBar.style.cssText = 'display:grid;grid-template-columns:60px repeat(7,1fr);height:36px;align-items:center;background:rgba(30,50,80,0.42);border-bottom:1.5px solid rgba(255,255,255,0.08);overflow-x:auto;white-space:nowrap;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);';
   allDayBar.appendChild(document.createElement('div'));
   for (let i=0; i<7; ++i) {
     const d = document.createElement('div');
@@ -249,7 +249,7 @@ function buildAgendaGrid() {
   // Agenda grid
   const agenda = document.createElement('div');
   agenda.className = 'agenda';
-  agenda.style.cssText = 'display:grid;grid-template-columns:60px repeat(7,1fr);grid-template-rows:repeat(24,60px);height:calc(100vh - 144px);overflow-y:auto;background:#181818;position:relative;-webkit-user-select:none;user-select:none;scroll-behavior:smooth;';
+  agenda.style.cssText = 'display:grid;grid-template-columns:60px repeat(7,1fr);grid-template-rows:repeat(24,60px);height:calc(100vh - 144px);overflow-y:auto;background:linear-gradient(145deg, #0d1f2d 0%, #162c40 20%, #1e3a56 45%, #285673 75%, #2e6a85 100%);position:relative;-webkit-user-select:none;user-select:none;scroll-behavior:smooth;border-radius:0 0 22px 22px;box-shadow:0 8px 32px 0 rgba(80,180,240,0.13);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);';
   agenda.tabIndex = 0;
   // Maak 24 rijen
   for (let uur=0; uur<24; ++uur) {
@@ -258,10 +258,10 @@ function buildAgendaGrid() {
       if (dag===0) {
         // Tijdskolom
         cel.textContent = (uur<10?'0':'')+uur+':00';
-        cel.style.cssText = 'color:#888;font-size:15px;display:flex;align-items:center;justify-content:center;border-right:1px solid #333;background:#181818;touch-action:none;-webkit-user-select:none;user-select:none;';
+        cel.style.cssText = 'color:#b7dfff;font-size:1em;display:flex;align-items:center;justify-content:center;border-right:1px solid rgba(255,255,255,0.08);background:rgba(30,50,80,0.22);touch-action:none;-webkit-user-select:none;user-select:none;';
       } else {
         // Altijd verticale lijn, ook bij zondag
-        cel.style.cssText = 'border-right:1px solid #444;border-bottom:1px solid #333;position:relative;background:#1a1a1a;';
+        cel.style.cssText = 'border-right:1px solid rgba(255,255,255,0.07);border-bottom:1px solid rgba(255,255,255,0.10);position:relative;background:rgba(30,50,80,0.13);transition:background 0.2s;';
         cel.className = 'agenda-cel';
         cel.dataset.dag = dag-1;
         cel.dataset.uur = uur;
@@ -997,10 +997,10 @@ function parseEnToon(bewerkte=false) {
         ? afspraak.datum.toLocaleDateString("nl-NL")
         : "Onbekend";
       html += `
-        <div class="veld" style="position:relative;padding-bottom:18px;" data-index="${index}">
+        <div class="veld agenda-card-glass" data-index="${index}">
           <button class="aanpas-btn" title="Aanpassen">✏️</button>
           <div class="afspraak-view">
-            <div><strong>📌 Titel:</strong> ${titelopschoner(afspraak.titel)}</div>
+            <div class="afspraak-titel"><strong>📌 Titel:</strong> ${titelopschoner(afspraak.titel)}</div>
             <div><strong>📅 Datum:</strong> ${afspraak.datum ? formatDatumNederlands(afspraak.datum) : 'Onbekend'}</div>
             <div><strong>⏰ Starttijd:</strong> ${heleDag ? "hele dag" : (afspraak.tijd || "Onbekend")}</div>
             <div><strong>🕒 Duur:</strong> ${heleDag ? "n.v.t." : `${duur} minuten`}</div>
@@ -1012,8 +1012,8 @@ function parseEnToon(bewerkte=false) {
             <label>Tijd: <select name="tijd">${genereerTijdOpties(afspraak.tijd)}</select></label><br>
             <label>Duur (min): <input type="number" name="duur" value="${duur}" min="1"></label><br>
             <label>Kleur: <select name="kleur">${genereerKleurOpties(afspraak.kleur)}</select></label><br>
-            <button type="submit" style="background:#27ae60;color:#fff;border:none;padding:6px 16px;border-radius:4px;font-weight:bold;cursor:pointer;margin-top:6px;">Opslaan</button>
-            <button type="button" class="annuleer-btn" style="margin-left:8px;">Annuleer</button>
+            <button type="submit" class="save-edit">Opslaan</button>
+            <button type="button" class="annuleer-btn">Annuleer</button>
           </form>
         </div>
       `;
