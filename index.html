@@ -595,6 +595,8 @@ function herkenMetSpinner() {
   </button>
 
   <div id="output" class="afspraken-lijst"></div>
+  <div id="agendaListView" class="agenda-list-view" style="display:none;"></div>
+  <button id="agenda-plus-btn" title="Nieuwe afspraak" style="position:fixed;right:24px;bottom:80px;width:56px;height:56px;border-radius:50%;background:#27ae60;color:#fff;font-size:2.2em;box-shadow:0 2px 8px #0003;z-index:900;border:none;cursor:pointer;">+</button>
  
 
   <template id="afspraak-edit-template">
@@ -952,5 +954,33 @@ function herkenMetSpinner() {
     </button>
   </nav>
 
+<script>
+// --- Agenda viewer toggle logic ---
+const agendaListView = document.getElementById('agendaListView');
+const agendaPlusBtn = document.getElementById('agenda-plus-btn');
+const outputDiv = document.getElementById('output');
+
+function showAgendaListView() {
+  outputDiv.style.display = 'none';
+  agendaListView.style.display = '';
+  agendaPlusBtn.style.display = '';
+  renderAgendaList();
+}
+function hideAgendaListView() {
+  outputDiv.style.display = '';
+  agendaListView.style.display = 'none';
+  agendaPlusBtn.style.display = 'none';
+}
+agendaPlusBtn.onclick = function() {
+  hideAgendaListView();
+  // Focus op toevoegen van nieuwe afspraak
+  document.getElementById('inputText').focus();
+};
+
+// Placeholder: renderAgendaList will be implemented in script_tool.js
+function renderAgendaList() {
+  agendaListView.innerHTML = '<div style="text-align:center;color:#aaa;padding:32px;">Laden...</div>';
+}
+</script>
 </body>
 </html>
