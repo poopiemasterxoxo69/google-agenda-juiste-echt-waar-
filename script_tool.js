@@ -1013,7 +1013,7 @@ function parseEnToon(bewerkte=false) {
             <label>Duur (min): <input type="number" name="duur" value="${duur}" min="1"></label><br>
             <label>Kleur: <select name="kleur">${genereerKleurOpties(afspraak.kleur)}</select></label><br>
             <button type="submit" class="save-edit">Opslaan</button>
-            <button type="button" class="annuleer-btn">Annuleer</button>
+            <button type="button" class="annuleer-btn" style="font-size:0.94em;padding:2px 9px;background:#f5f5f5;color:#888;border:1px solid #eee;border-radius:5px;margin-top:4px;">Annuleer</button>
           </form>
         </div>
       `;
