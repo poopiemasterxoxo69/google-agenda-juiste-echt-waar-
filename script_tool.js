@@ -378,60 +378,34 @@ function vulAfsprakenInGrid(agenda, monday, allDayBar) {
   });
 }
 
+function showEventTooltip(event, target) {
   // Verwijder bestaande tooltips
   document.querySelectorAll('.event-tooltip').forEach(tip=>tip.remove());
   const tip = document.createElement('div');
   tip.className = 'event-tooltip';
+  // Mobiel: onderin scherm, grote tekst, sluitknop
   tip.style.cssText = 'position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:9999;background:#28292b;color:#fff;padding:20px 16px 30px 16px;border-radius:18px 18px 0 0;box-shadow:0 -4px 24px #000a;font-size:18px;max-width:98vw;min-width:180px;width:96vw;pointer-events:auto;transition:bottom 0.25s;';
-
   let tijd = '';
-  let heleDag = false;
-  let startDate, endDate;
   if (event.start.dateTime && event.end.dateTime) {
-    startDate = new Date(event.start.dateTime);
-    endDate = new Date(event.end.dateTime);
-    tijd = `${startDate.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})} - ${endDate.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`;
+    const sd = new Date(event.start.dateTime);
+    const ed = new Date(event.end.dateTime);
+    tijd = `${sd.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})} - ${ed.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`;
   } else if (event.start.date) {
-    heleDag = true;
-    startDate = new Date(event.start.date);
     tijd = 'Hele dag';
   }
-
-  // Toon event details + bewerkbare velden (verborgen tot edit)
-  tip.innerHTML = `
-    <div id="event-view-mode">
-      <div style='font-size:20px;font-weight:bold;margin-bottom:8px;'>${event.summary||( '(geen titel)')}</div>
-      <div style='margin-bottom:6px;'>${tijd}</div>
-      ${event.location?'<div style="color:#aaf;margin-bottom:6px;"> '+event.location+'</div>':''}
-      ${event.description?'<div style="color:#bbb;white-space:pre-line;margin-bottom:6px;">'+event.description+'</div>':''}
-      <button id="edit-event-btn" style="background:#27ae60;color:#fff;padding:7px 18px;border-radius:8px;border:none;font-size:1em;margin-right:10px;cursor:pointer;">Bewerk</button>
-      <button id="delete-event-btn" style="background:#e74c3c;color:#fff;padding:7px 18px;border-radius:8px;border:none;font-size:1em;cursor:pointer;">Verwijder</button>
-      <button style='position:absolute;right:18px;top:10px;background:none;border:none;color:#fff;font-size:28px;line-height:1;cursor:pointer;' id="close-tip-btn">&times;</button>
-    </div>
-    <form id="event-edit-mode" style="display:none;margin-top:8px;">
-      <label>Titel:<br><input name="summary" value="${event.summary||''}" style="width:100%;padding:7px;border-radius:7px;margin-bottom:7px;"></label><br>
-      <label>Locatie:<br><input name="location" value="${event.location||''}" style="width:100%;padding:7px;border-radius:7px;margin-bottom:7px;"></label><br>
-      <label>Beschrijving:<br><textarea name="description" style="width:100%;padding:7px;border-radius:7px;margin-bottom:7px;">${event.description||''}</textarea></label><br>
-      <label>Tijd:<br><input type="time" name="startTime" value="${!heleDag?startDate.toISOString().slice(11,16):''}" ${heleDag?'disabled':''} style="margin-right:8px;"> - <input type="time" name="endTime" value="${!heleDag?endDate.toISOString().slice(11,16):''}" ${heleDag?'disabled':''}></label><br>
-      <label><input type="checkbox" name="heleDag" ${heleDag?'checked':''}> Hele dag</label><br>
-      <label>Kleur:<br><input name="colorId" value="${event.colorId||''}" style="width:80px;"></label><br>
-      <button type="submit" style="background:#27ae60;color:#fff;padding:7px 18px;border-radius:8px;border:none;font-size:1em;margin-right:10px;cursor:pointer;">Opslaan</button>
-      <button type="button" id="cancel-edit-btn" style="background:#888;color:#fff;padding:7px 18px;border-radius:8px;border:none;font-size:1em;cursor:pointer;">Annuleer</button>
-    </form>
-  `;
-
-  // Sluiten bij klik buiten tooltip of op sluitknop
+  tip.innerHTML = `<div style='font-size:20px;font-weight:bold;margin-bottom:8px;'>${event.summary||'(geen titel)'}</div><div style='margin-bottom:6px;'>${tijd}</div>${event.location?'<div style="color:#aaf;margin-bottom:6px;">📍 '+event.location+'</div>':''}${event.description?'<div style=\"color:#bbb;white-space:pre-line;\">'+event.description+'</div>':''}<button style='position:absolute;right:18px;top:10px;background:none;border:none;color:#fff;font-size:28px;line-height:1;cursor:pointer;' onclick='this.parentNode.remove()'>&times;</button>`;
+  // Sluiten bij klik buiten tooltip
   function closeTip(e) {
     if (!tip.contains(e.target)) { tip.remove(); document.removeEventListener('mousedown', closeTip); }
   }
-  document.getElementById('close-tip-btn').onclick = () => { tip.remove(); document.removeEventListener('mousedown', closeTip); };
   document.addEventListener('mousedown', closeTip);
   document.body.appendChild(tip);
+}
 
-  // Edit mode tonen
-  tip.querySelector('#edit-event-btn').onclick = () => {
-    tip.querySelector('#event-view-mode').style.display = 'none';
-    tip.querySelector('#event-edit-mode').style.display = '';
+
+function updateRealtimeClock() {
+  const klok = document.getElementById('weekagenda-klok');
+  if (!klok) return;
   function update() {
     const nu = new Date();
     klok.textContent = `🕒 ${nu.getHours().toString().padStart(2,'0')}:${nu.getMinutes().toString().padStart(2,'0')}`;
