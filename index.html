@@ -14,6 +14,7 @@
   <link rel="manifest" href="manifest.json">
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
   <style>
+    html, body { height: 100%; overflow-x: hidden; }
     :root {
       --primary: #00c6ff;
       --secondary: #00f2c3;
@@ -517,7 +518,7 @@ button::after, #voegToeButton::after, #herkenButton::after {
   <canvas id="bubble-canvas"></canvas>
   <div id="main-content">
     <div id="profileBox" style="position:fixed;top:20px;right:32px;z-index:1000;"></div>
-    <h1>Agenda Tool42</h1>
+    <h1>Agenda Tool46</h1>
   <div id="g_id_onload"
      data-client_id="YOUR_CLIENT_ID"
      data-callback="handleCredentialResponse"
@@ -596,7 +597,7 @@ function herkenMetSpinner() {
 
   <div id="output" class="afspraken-lijst"></div>
   <div id="agendaListView" class="agenda-list-view" style="display:none;"></div>
-  <button id="agenda-plus-btn" title="Nieuwe afspraak" style="position:fixed;right:24px;bottom:80px;width:56px;height:56px;border-radius:50%;background:#27ae60;color:#fff;font-size:2.2em;box-shadow:0 2px 8px #0003;z-index:900;border:none;cursor:pointer;">+</button>
+  <button id="agenda-plus-btn" title="Nieuwe afspraak" style="position:fixed;right:24px;bottom:80px;width:56px;height:56px;border-radius:50%;background:#27ae60;color:#fff;font-size:2.2em;box-shadow:0 2px 8px #0003;z-index:900;border:none;cursor:pointer;"><span class="plus-icon">+</span></button>
  
 
   <template id="afspraak-edit-template">
@@ -704,6 +705,59 @@ function herkenMetSpinner() {
     for(let i=0;i<24;i++) bubbles.push(createBubble());
     animate();
   </script>
+  <style>
+    :root {
+      --bottom-nav-height: 72px;
+      --fab-gap: 16px;
+    }
+    body {
+      /* Make room for fixed bottom nav, including notches */
+      padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+    }
+    #agendaView {
+      /* Ensure content isn't hidden behind bottom nav */
+      padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+    }
+    #agenda-plus-btn {
+      bottom: calc(var(--bottom-nav-height) + var(--fab-gap) + env(safe-area-inset-bottom, 0px)) !important;
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+      transform: translateZ(0);
+      will-change: transform;
+      z-index: 1103 !important;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      padding: 0;
+    }
+    #agenda-plus-btn .plus-icon {
+      display: inline-block;
+      line-height: 1;
+      transform: translateY(-1px);
+      font-weight: 600;
+      pointer-events: none;
+    }
+    nav.bottom-nav {
+      position: fixed; left: 0; right: 0; bottom: 0; width: 100%; height: var(--bottom-nav-height);
+      background: linear-gradient(145deg,#0d1f2d 0%, #162c40 30%, #1e3a56 60%);
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.25);
+      display: flex; z-index: 1002;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      align-items: center;
+      overflow: visible;
+      transform: translateZ(0);
+    }
+    nav.bottom-nav button {
+      height: 100%;
+      padding: 6px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+      color: #cdefff;
+      background: transparent;
+      border: none;
+      outline: none;
+    }
+    nav.bottom-nav button span { display:block; line-height: 1.05; }
+  </style>
   <script>
   // --- Bubble animatie voor agenda viewer ---
   (function() {
@@ -1050,8 +1104,6 @@ function herkenMetSpinner() {
   <script src="form_ui.js"></script>
   <script src="events_api.js"></script>
   <script src="manual_plus.js"></script>
-  <!-- Zwevende + knop -->
-  <button id="manual-plus-btn" title="Nieuwe afspraak" style="position:fixed;right:32px;bottom:72px;width:56px;height:56px;border-radius:50%;background:#27ae60;color:#fff;font-size:2.2em;box-shadow:0 2px 8px #0003;z-index:900;border:none;cursor:pointer;">+</button>
 
   <!-- Agenda weekoverzicht (verborgen bij start) -->
     <div id="agendaView" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:transparent;z-index:1001;overflow-y:auto;overflow-x:hidden;">
@@ -1061,7 +1113,7 @@ function herkenMetSpinner() {
 
 
   <!-- Bottom navigation bar -->
-  <nav style="position:fixed;left:0;bottom:0;width:100vw;height:64px;background:transparent;box-shadow:none;display:flex;z-index:1002;">
+  <nav class="bottom-nav">
     <button id="nav-afspraak" style="background:none;border:none;outline:none;font-size:1.1em;display:flex;flex-direction:column;align-items:center;color:#27ae60;flex:1;">
       <span style="font-size:1.7em;">📅</span>
       Afspraak maken
@@ -1081,19 +1133,14 @@ const outputDiv = document.getElementById('output');
 function showAgendaListView() {
   outputDiv.style.display = 'none';
   agendaListView.style.display = '';
-  agendaPlusBtn.style.display = '';
   renderAgendaList();
 }
 function hideAgendaListView() {
   outputDiv.style.display = '';
   agendaListView.style.display = 'none';
-  agendaPlusBtn.style.display = 'none';
 }
-agendaPlusBtn.onclick = function() {
-  hideAgendaListView();
-  // Focus op toevoegen van nieuwe afspraak
-  document.getElementById('inputText').focus();
-};
+// Focus op toevoegen van nieuwe afspraak
+document.getElementById('inputText').focus();
 
 // Placeholder: renderAgendaList will be implemented in script_tool.js
 function renderAgendaList() {
