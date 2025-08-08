@@ -519,170 +519,52 @@ function titelopschoner(tekst) {
 
 // Functie die wordt aangeroepen bij het klikken op "Herken gegevens"
 function updateAfsprakenBufferNaEdit(afspraken) {
-  window._bewerkteAfspraken = afspraken.map(a => ({...a}));
+  if (window.FormUI && typeof window.FormUI.updateAfsprakenBufferNaEdit === 'function') {
+    return window.FormUI.updateAfsprakenBufferNaEdit(afspraken);
+  }
+  console.error('[FormUI] updateAfsprakenBufferNaEdit implementation not loaded yet');
 }
 
 function kleurLabelToe(kleur) {
-  const kleuren = {
-    'random': '🎲 Willekeurig',
-    '11': '❤️ Rood (Tomaat)',
-    '6': '🟧 Oranje (Mandarijn)',
-    '5': '💛 Geel (Zonnebloem)',
-    '10': '💚 Donkergroen (Basilicum)',
-    '2': '💚 Lichtgroen (Salie)',
-    '9': '💙 Blauw (Pauw)',
-    '7': '🫐 Bosbes',
-    '3': '💜 Lavendel',
-    '4': '🍇 Paars (Druif)',
-    '1': '💗 Roze (Flamingo)',
-    '8': '⚫ Grijs (Grafiet)'
-  };
-  return kleuren[kleur] || kleur;
+  if (window.FormUI && typeof window.FormUI.kleurLabelToe === 'function') {
+    return window.FormUI.kleurLabelToe(kleur);
+  }
+  console.error('[FormUI] kleurLabelToe implementation not loaded yet');
 }
 
 function genereerKleurOpties(geselecteerd) {
-  const kleuren = [
-    { value: 'random', label: '🎲 Willekeurig' },
-    { value: '11', label: '❤️ Rood (Tomaat)' },
-    { value: '6', label: '🟧 Oranje (Mandarijn)' },
-    { value: '5', label: '💛 Geel (Zonnebloem)' },
-    { value: '10', label: '💚 Donkergroen (Basilicum)' },
-    { value: '2', label: '💚 Lichtgroen (Salie)' },
-    { value: '9', label: '💙 Blauw (Pauw)' },
-    { value: '7', label: '🫐 Bosbes' },
-    { value: '3', label: '💜 Lavendel' },
-    { value: '4', label: '🍇 Paars (Druif)' },
-    { value: '1', label: '💗 Roze (Flamingo)' },
-    { value: '8', label: '⚫ Grijs (Grafiet)' }
-  ];
-  return kleuren.map(k => `<option value="${k.value}"${geselecteerd == k.value ? ' selected' : ''}>${k.label}</option>`).join('');
+  if (window.FormUI && typeof window.FormUI.genereerKleurOpties === 'function') {
+    return window.FormUI.genereerKleurOpties(geselecteerd);
+  }
+  console.error('[FormUI] genereerKleurOpties implementation not loaded yet');
 }
 
 function genereerTijdOpties(geselecteerd) {
-  let opties = '';
-  for (let h = 0; h < 24; h++) {
-    for (let m = 0; m < 60; m += 5) {
-      let hh = h.toString().padStart(2, '0');
-      let mm = m.toString().padStart(2, '0');
-      let tijd = `${hh}:${mm}`;
-      let selected = geselecteerd === tijd ? ' selected' : '';
-      opties += `<option value="${tijd}"${selected}>${tijd}</option>`;
-    }
+  if (window.FormUI && typeof window.FormUI.genereerTijdOpties === 'function') {
+    return window.FormUI.genereerTijdOpties(geselecteerd);
   }
-  return opties;
+  console.error('[FormUI] genereerTijdOpties implementation not loaded yet');
 }
 
 function deleteAllAfspraken() {
-  window._bewerkteAfspraken = null;
-  if (window.afsprakenBuffer) window.afsprakenBuffer = null;
-  // Eventueel andere globale buffers hier wissen
+  if (window.FormUI && typeof window.FormUI.deleteAllAfspraken === 'function') {
+    return window.FormUI.deleteAllAfspraken();
+  }
+  console.error('[FormUI] deleteAllAfspraken implementation not loaded yet');
 }
 
 function formatDatumNederlands(datum) {
-  if (!(datum instanceof Date) || isNaN(datum.getTime())) return '';
-  const dagen = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
-  const maanden = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
-  const dag = datum.getDate();
-  const maand = datum.getMonth() + 1;
-  const jaar = datum.getFullYear();
-  const dagNaam = dagen[datum.getDay()];
-  const maandNaam = maanden[datum.getMonth()];
-  return `${dag}-${maand}-${jaar} (${dagNaam} ${dag} ${maandNaam} ${jaar})`;
+  if (window.FormUI && typeof window.FormUI.formatDatumNederlands === 'function') {
+    return window.FormUI.formatDatumNederlands(datum);
+  }
+  console.error('[FormUI] formatDatumNederlands implementation not loaded yet');
 }
 
 function parseEnToon(bewerkte=false) {
-  if (!bewerkte) {
-    window._bewerkteAfspraken = null;
-    // Eventueel andere globale buffers wissen:
-    if (window.afsprakenBuffer) window.afsprakenBuffer = null;
+  if (window.FormUI && typeof window.FormUI.parseEnToon === 'function') {
+    return window.FormUI.parseEnToon(bewerkte);
   }
-  let afspraken;
-  const kleur = document.getElementById("kleur").value;
-  const duur = document.getElementById("duur").value;
-  const heleDag = document.getElementById("heleDag").checked;
-
-    if (bewerkte && window._bewerkteAfspraken) {
-      afspraken = window._bewerkteAfspraken;
-    } else {
-      const tekst = document.getElementById("inputText").value;
-      const tijdMatches = tekst.match(/(\d{1,2}[:.]\d{2})/g);
-      if (tijdMatches && tijdMatches.length > 1) {
-        afspraken = parseMeerdereAfsprakenInRegel(tekst);
-      } else {
-        afspraken = [parseTextToEvent(tekst)];
-      }
-      // Propagate kleur to all afspraken if not set, maar laat 'random' gewoon als 'random' staan
-      afspraken = afspraken.map(a => ({ ...a, kleur: a.kleur || kleur }));
-      window._bewerkteAfspraken = null;
-    }
-
-  if (afspraken.length > 0) {
-    let html = "";
-    afspraken.forEach((afspraak, index) => {
-      const datumStr = afspraak.datum && afspraak.datum.toLocaleDateString
-        ? afspraak.datum.toLocaleDateString("nl-NL")
-        : "Onbekend";
-      html += `
-        <div class="veld agenda-card-glass" data-index="${index}">
-          <button class="aanpas-btn" title="Aanpassen">✏️</button>
-          <div class="afspraak-view">
-            <div class="afspraak-titel"><strong>📌 Titel:</strong> ${titelopschoner(afspraak.titel)}</div>
-            <div><strong>📅 Datum:</strong> ${afspraak.datum ? formatDatumNederlands(afspraak.datum) : 'Onbekend'}</div>
-            <div><strong>⏰ Starttijd:</strong> ${heleDag ? "hele dag" : (afspraak.tijd || "Onbekend")}</div>
-            <div><strong>🕒 Duur:</strong> ${heleDag ? "n.v.t." : `${duur} minuten`}</div>
-            <div><strong>🎨 Kleur:</strong> ${kleurLabelToe(afspraak.kleur)}</div>
-          </div>
-          <form class="afspraak-edit" style="display:none;margin-top:6px;">
-            <label>Titel: <input type="text" name="titel" value="${titelopschoner(afspraak.titel)}"></label><br>
-            <label>Datum: <input type="date" name="datum" value="${afspraak.datum ? afspraak.datum.toISOString().split('T')[0] : ''}"></label><br>
-            <label>Tijd: <select name="tijd">${genereerTijdOpties(afspraak.tijd)}</select></label><br>
-            <label>Duur (min): <input type="number" name="duur" value="${duur}" min="1"></label><br>
-            <label>Kleur: <select name="kleur">${genereerKleurOpties(afspraak.kleur)}</select></label><br>
-            <button type="submit" class="save-edit">Opslaan</button>
-            <button type="button" class="annuleer-btn" style="font-size:0.94em;padding:2px 9px;background:#f5f5f5;color:#888;border:1px solid #eee;border-radius:5px;margin-top:4px;">Annuleer</button>
-          </form>
-        </div>
-      `;
-      if (index < afspraken.length - 1) html += "<hr>";
-    });
-    document.getElementById("output").innerHTML = html;
-    if (document.getElementById("meerdereOutput")) {
-      document.getElementById("meerdereOutput").innerHTML = "";
-    }
-
-    // Event listeners voor aanpas, opslaan en annuleer
-    document.querySelectorAll('.aanpas-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const veld = btn.closest('.veld');
-        veld.querySelector('.afspraak-view').style.display = 'none';
-        veld.querySelector('.afspraak-edit').style.display = 'block';
-      });
-    });
-    document.querySelectorAll('.afspraak-edit').forEach(form => {
-      form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const veld = form.closest('.veld');
-        const index = parseInt(veld.getAttribute('data-index'));
-        // Haal waarden op
-        afspraken[index].titel = form.titel.value;
-        afspraken[index].datum = form.datum.value ? new Date(form.datum.value) : afspraken[index].datum;
-        afspraken[index].tijd = form.tijd.value;
-        afspraken[index].duur = form.duur.value;
-        afspraken[index].kleur = form.kleur.value;
-        updateAfsprakenBufferNaEdit(afspraken);
-        parseEnToon(true);
-      });
-      form.querySelector('.annuleer-btn').addEventListener('click', function() {
-        form.style.display = 'none';
-        form.closest('.veld').querySelector('.afspraak-view').style.display = 'block';
-      });
-    });
-  } else {
-    document.getElementById("output").innerText = "Geen afspraken gevonden.";
-    if (document.getElementById("meerdereOutput")) {
-      document.getElementById("meerdereOutput").innerText = "";
-    }
-  }
+  console.error('[FormUI] parseEnToon implementation not loaded yet');
 }
 
 
@@ -701,166 +583,39 @@ document.addEventListener("DOMContentLoaded", () => {
 // Check op conflicterende afspraken binnen 30 minuten
 // Controleer of er conflicterende afspraken zijn tussen start en end (timed en hele dag)
 async function checkConflictingEvents(start, end) {
-  // start en end zijn Date objecten
-  const timeMin = new Date(start.getTime() - 30 * 60000).toISOString();
-  const timeMax = new Date(end.getTime() + 30 * 60000).toISOString();
-  const res = await gapi.client.calendar.events.list({
-    calendarId: 'primary',
-    timeMin,
-    timeMax,
-    singleEvents: true,
-    orderBy: 'startTime'
-  });
-  if (!res.result.items) return false;
-  let conflicts = res.result.items.filter(ev => {
-    // Google Calendar API: hele dag events hebben alleen ev.start.date (geen dateTime)
-    let evStart = ev.start.dateTime ? new Date(ev.start.dateTime) : new Date(ev.start.date + 'T00:00:00');
-    let evEnd = ev.end.dateTime ? new Date(ev.end.dateTime) : new Date(ev.end.date + 'T23:59:59');
-    // Overlap: ev eindigt NA start én ev begint VOOR end
-    return evEnd > start && evStart < end;
-  });
-  if (conflicts.length > 0) {
-    console.log('Conflicterende afspraken gevonden:', conflicts);
-    return true;
+  if (window.EventsAPI && typeof window.EventsAPI.checkConflictingEvents === 'function') {
+    return window.EventsAPI.checkConflictingEvents(start, end);
   }
-  return false;
+  console.error('[EventsAPI] checkConflictingEvents implementation not loaded yet');
 }
 
 function combineDateTime(datum, tijd) {
-  if (!datum || !tijd) return undefined;
-  const [hh, mm] = tijd.split(':').map(Number);
-  const d = new Date(datum);
-  d.setHours(hh, mm, 0, 0);
-  return d.toISOString();
+  if (window.EventsAPI && typeof window.EventsAPI.combineDateTime === 'function') {
+    return window.EventsAPI.combineDateTime(datum, tijd);
+  }
+  console.error('[EventsAPI] combineDateTime implementation not loaded yet');
 }
 
 function berekenEindtijd(datum, tijd, duur) {
-  if (!datum || !tijd) return undefined;
-  const [hh, mm] = tijd.split(':').map(Number);
-  const d = new Date(datum);
-  d.setHours(hh, mm, 0, 0);
-  d.setMinutes(d.getMinutes() + parseInt(duur || 60));
-  return d.toISOString();
+  if (window.EventsAPI && typeof window.EventsAPI.berekenEindtijd === 'function') {
+    return window.EventsAPI.berekenEindtijd(datum, tijd, duur);
+  }
+  console.error('[EventsAPI] berekenEindtijd implementation not loaded yet');
 }
 
 // Voeg afspraken toe aan Google Agenda
 function getActueleAfspraken() {
-  if (window._bewerkteAfspraken && Array.isArray(window._bewerkteAfspraken)) {
-    return window._bewerkteAfspraken;
+  if (window.EventsAPI && typeof window.EventsAPI.getActueleAfspraken === 'function') {
+    return window.EventsAPI.getActueleAfspraken();
   }
-  // Indien geen edits: parse opnieuw uit inputText
-  const tekst = document.getElementById("inputText").value;
-  const tijdMatches = tekst.match(/(\d{1,2}[:.]\d{2})/g);
-  if (tijdMatches && tijdMatches.length > 1) {
-    return parseMeerdereAfsprakenInRegel(tekst);
-  }
-  return [parseTextToEvent(tekst)];
+  console.error('[EventsAPI] getActueleAfspraken implementation not loaded yet');
 }
 
 async function addEvent() {
-  if (!window.accessToken) {
-    alert("Log eerst in met Google.");
-    return;
+  if (window.EventsAPI && typeof window.EventsAPI.addEvent === 'function') {
+    return window.EventsAPI.addEvent();
   }
-  let afspraken = getActueleAfspraken();
-  const kleur = document.getElementById("kleur").value;
-  const duur = parseInt(document.getElementById("duur").value);
-  const heleDag = document.getElementById("heleDag").checked;
-  // Hoofd-titel bepalen voor fallback
-  let dagNamen = ["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
-  let dagRegex2 = dagNamen.join("|");
-  const tekst = document.getElementById("inputText").value;
-  let eersteBlok = tekst.split(new RegExp(`[\r\n\.]+|, (?=${dagRegex2})`, 'i')).find(r => new RegExp(`\b(${dagRegex2})\b`, 'i').test(r));
-  let hoofdTitel = null;
-  if (eersteBlok) {
-    let dagMatch = eersteBlok.match(new RegExp(`^(.*?)\b(${dagRegex2})\b`, 'i'));
-    if (dagMatch && dagMatch[1].trim().length > 0) {
-      hoofdTitel = titelopschoner(dagMatch[1].trim());
-    }
-  }
-  // Fallback hoofd-titel toepassen
-  afspraken = afspraken.map(afspraak => {
-    let schoneTitel = titelopschoner(afspraak.titel);
-    if (!schoneTitel || schoneTitel === "Onbekende afspraak") {
-      schoneTitel = hoofdTitel ? hoofdTitel : "Onbekende afspraak";
-    }
-    return { ...afspraak, titel: schoneTitel };
-  });
-
-  let toegevoegd = 0;
-  let details = '';
-  for (let afspraak of afspraken) {
-    let start, end;
-    // Google Calendar colorId moet een string zijn van 1 t/m 11 (geen undefined/null)
-    let kleurEvent = undefined;
-    if (afspraak.kleur === 'random' || (!afspraak.kleur && kleur === 'random')) {
-      // Kies nu pas een random kleur uit ALLE opties van genereerKleurOpties
-      const kleuren = ['11','6','5','10','2','9','7','3','4','1','8']; // match dropdown volgorde
-      kleurEvent = kleuren[Math.floor(Math.random()*kleuren.length)];
-    } else if (afspraak.kleur && afspraak.kleur !== 'random') {
-      kleurEvent = String(afspraak.kleur);
-    } else if (kleur && kleur !== 'random') {
-      kleurEvent = String(kleur);
-    } else {
-      kleurEvent = '1'; // fallback: roze
-    }
-    let duurEvent = afspraak.duur ? parseInt(afspraak.duur) : (duur || 60);
-    let datum = afspraak.datum instanceof Date ? afspraak.datum : new Date(afspraak.datum);
-    let tijd = afspraak.tijd;
-    // Gebruik altijd heleDag checkbox om te bepalen of het een all-day event is
-    if (heleDag) {
-      start = { date: datum.toISOString().slice(0, 10) };
-      let endDate = new Date(datum);
-      endDate.setDate(endDate.getDate() + 1);
-      end = { date: endDate.toISOString().slice(0, 10) };
-    } else if (tijd && tijd.match(/^\d{1,2}:\d{2}$/)) {
-      let [hh, mm] = tijd.split(':').map(Number);
-      datum.setHours(hh, mm, 0, 0);
-      start = { dateTime: datum.toISOString(), timeZone: 'Europe/Amsterdam' };
-      let eind = new Date(datum.getTime() + duurEvent * 60000);
-      end = { dateTime: eind.toISOString(), timeZone: 'Europe/Amsterdam' };
-    } else {
-      // fallback: geen tijd en niet hele dag, behandel als hele dag
-      start = { date: datum.toISOString().slice(0, 10) };
-      let endDate = new Date(datum);
-      endDate.setDate(endDate.getDate() + 1);
-      end = { date: endDate.toISOString().slice(0, 10) };
-    }
-    let event = {
-      summary: afspraak.titel,
-      start,
-      end,
-      colorId: kleurEvent,
-      reminders: {
-        useDefault: false,
-        overrides: [
-          { method: 'popup', minutes: 10 },
-          { method: 'popup', minutes: 30 },
-          { method: 'popup', minutes: 24 * 60 }, // 1 dag
-          { method: 'popup', minutes: 2 * 24 * 60 } // 2 dagen
-        ]
-      }
-    };
-    // Controleer op conflicten vóór toevoegen
-    let conflict = await checkConflictingEvents(
-      tijd && tijd.match(/^\d{1,2}:\d{2}$/) ? datum : new Date(datum.toISOString().slice(0,10) + 'T00:00:00'),
-      tijd && tijd.match(/^\d{1,2}:\d{2}$/) ? new Date(datum.getTime() + duurEvent * 60000) : new Date(datum.toISOString().slice(0,10) + 'T23:59:59')
-    );
-    if (conflict) {
-      if (!confirm(`Let op: er is al een afspraak rond deze tijd (${afspraak.titel} - ${afspraak.tijd || start.date}). Toch toevoegen?`)) {
-        details += `\nNiet toegevoegd (conflict): ${event.summary}`;
-        continue;
-      }
-    }
-    try {
-      await gapi.client.calendar.events.insert({ calendarId: 'primary', resource: event });
-      toegevoegd++;
-      details += `\nTitel: ${event.summary}\nDatum: ${heleDag ? start.date : datum.toLocaleString()}\nTijd: ${afspraak.tijd || ''}\nKleur: ${kleur}\nDuur: ${duur} min\n---`;
-    } catch (e) {
-      details += `\nFout bij toevoegen van afspraak: ${event.summary} (${e.message})`;
-    }
-  }
-  alert(`${toegevoegd} afspraak/afspraken toegevoegd aan je Google Agenda!${details}`);
+  console.error('[EventsAPI] addEvent implementation not loaded yet');
 }
 
 // Handmatige afspraak toevoegen verplaatst naar manual_plus.js (FAB handler)
