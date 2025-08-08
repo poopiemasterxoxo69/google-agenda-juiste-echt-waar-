@@ -517,7 +517,7 @@ button::after, #voegToeButton::after, #herkenButton::after {
   <canvas id="bubble-canvas"></canvas>
   <div id="main-content">
     <div id="profileBox" style="position:fixed;top:20px;right:32px;z-index:1000;"></div>
-    <h1>Agenda Tool36</h1>
+    <h1>Agenda Tool42</h1>
   <div id="g_id_onload"
      data-client_id="YOUR_CLIENT_ID"
      data-callback="handleCredentialResponse"
@@ -808,7 +808,13 @@ function herkenMetSpinner() {
       fetch('https://people.googleapis.com/v1/people/me?personFields=photos,names,emailAddresses', {
         headers: { Authorization: 'Bearer ' + token }
       })
-        .then(res => res.json())
+        .then(async res => {
+          if (!res.ok) {
+            console.warn('[LOGIN] People API niet ok:', res.status);
+            throw new Error('people_api_' + res.status);
+          }
+          return res.json();
+        })
         .then(data => {
           const profileBox = document.getElementById('profileBox');
           if (!profileBox) { console.warn('[LOGIN] profileBox niet gevonden'); return; }
@@ -819,7 +825,24 @@ function herkenMetSpinner() {
           if (loginBtn) loginBtn.style.display = 'none';
           console.log('[LOGIN] Profiel getoond:', { hasImg: !!imgUrl, name });
         })
-        .catch(e => console.error('[LOGIN] Fout bij ophalen profielinfo', e));
+        .catch(async e => {
+          console.warn('[LOGIN] Fout People API, probeer userinfo fallback:', e?.message||e);
+          try {
+            const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: 'Bearer ' + token } });
+            if (!r.ok) throw new Error('userinfo_' + r.status);
+            const u = await r.json();
+            const profileBox = document.getElementById('profileBox');
+            if (!profileBox) { console.warn('[LOGIN] profileBox niet gevonden'); return; }
+            const imgUrl = u.picture || '';
+            const name = u.name || u.given_name || '';
+            profileBox.innerHTML = imgUrl ? `<img src="${imgUrl}" alt="profiel" style="width:48px;height:48px;border-radius:50%;box-shadow:0 2px 8px #0003;vertical-align:middle;"> <span style='font-size:16px;font-weight:bold;vertical-align:middle;'>${name}</span>` : '';
+            const loginBtn = document.getElementById('loginButton');
+            if (loginBtn) loginBtn.style.display = 'none';
+            console.log('[LOGIN] Profiel getoond via userinfo fallback:', { hasImg: !!imgUrl, name });
+          } catch (e2) {
+            console.error('[LOGIN] Fallback userinfo mislukt:', e2);
+          }
+        });
     }
     function patchTokenClientCallback() {
       if (!window.tokenClient) return;
@@ -842,7 +865,7 @@ function herkenMetSpinner() {
       }
       window.tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
-        scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events',
+        scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.profile openid email',
         callback: (tokenResponse) => {
           window.accessToken = tokenResponse.access_token;
           const status = document.getElementById('status');
