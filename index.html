@@ -796,6 +796,96 @@ function herkenMetSpinner() {
   <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
+    // --- Google login/profile & console checks ---
+    window.accessToken = null;
+    window.loginButtonVisible = true;
+    function updateLoginButtonVisibility() {
+      const loginBtn = document.getElementById('loginButton');
+      if (loginBtn) loginBtn.style.display = window.loginButtonVisible ? '' : 'none';
+    }
+    function showProfileInfo(token) {
+      console.log('[LOGIN] showProfileInfo() token present?', !!token);
+      fetch('https://people.googleapis.com/v1/people/me?personFields=photos,names,emailAddresses', {
+        headers: { Authorization: 'Bearer ' + token }
+      })
+        .then(res => res.json())
+        .then(data => {
+          const profileBox = document.getElementById('profileBox');
+          if (!profileBox) { console.warn('[LOGIN] profileBox niet gevonden'); return; }
+          let imgUrl = data?.photos?.[0]?.url || '';
+          let name = data?.names?.[0]?.displayName || '';
+          profileBox.innerHTML = imgUrl ? `<img src="${imgUrl}" alt="profiel" style="width:48px;height:48px;border-radius:50%;box-shadow:0 2px 8px #0003;vertical-align:middle;"> <span style='font-size:16px;font-weight:bold;vertical-align:middle;'>${name}</span>` : '';
+          const loginBtn = document.getElementById('loginButton');
+          if (loginBtn) loginBtn.style.display = 'none';
+          console.log('[LOGIN] Profiel getoond:', { hasImg: !!imgUrl, name });
+        })
+        .catch(e => console.error('[LOGIN] Fout bij ophalen profielinfo', e));
+    }
+    function patchTokenClientCallback() {
+      if (!window.tokenClient) return;
+      if (window.tokenClient._profilePatched) return;
+      const orig = window.tokenClient.callback;
+      window.tokenClient.callback = function(resp) {
+        if (resp && resp.access_token) {
+          console.log('[LOGIN] access_token ontvangen');
+          showProfileInfo(resp.access_token);
+        }
+        if (typeof orig === 'function') orig(resp);
+      };
+      window.tokenClient._profilePatched = true;
+      console.log('[LOGIN] tokenClient callback gepatcht');
+    }
+    function initGoogleLogin() {
+      if (!(window.google && google.accounts && google.accounts.oauth2)) {
+        console.error('[LOGIN] google.accounts.oauth2 niet geladen');
+        return;
+      }
+      window.tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
+        scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events',
+        callback: (tokenResponse) => {
+          window.accessToken = tokenResponse.access_token;
+          const status = document.getElementById('status');
+          if (status) status.innerText = 'Ingelogd ✔';
+          window.loginButtonVisible = false;
+          updateLoginButtonVisibility();
+          console.log('[LOGIN] Ingelogd, accessToken gezet');
+        }
+      });
+      patchTokenClientCallback();
+    }
+    document.addEventListener('DOMContentLoaded', function(){
+      console.log('[BOOT] DOMContentLoaded (index.html)');
+      function wachtOpGoogle(cb, tries=0){
+        if (window.google && window.google.accounts && window.google.accounts.oauth2) cb();
+        else if (tries < 30) setTimeout(()=>wachtOpGoogle(cb, tries+1), 100);
+        else console.error('[LOGIN] Google accounts niet gevonden');
+      }
+      wachtOpGoogle(initGoogleLogin);
+      updateLoginButtonVisibility();
+      // Monitor voor knop/status sync
+      (function monitor(){
+        const statusP = document.getElementById('status');
+        const loginBtn = document.getElementById('loginButton');
+        if (statusP && loginBtn) {
+          if ((statusP.textContent||'').includes('Ingelogd')) loginBtn.style.display = 'none';
+          else loginBtn.style.display = '';
+        }
+        setTimeout(monitor, 600);
+      })();
+      // Login-knop
+      const loginBtn = document.getElementById('loginButton');
+      if (loginBtn) {
+        loginBtn.addEventListener('click', function(){
+          if (window.tokenClient) window.tokenClient.requestAccessToken();
+          else alert('Google auth is nog niet geladen.');
+        });
+      }
+      console.log('[CHECK] gapi aanwezig?', !!window.gapi);
+      console.log('[CHECK] tokenClient aanwezig?', !!window.tokenClient);
+    });
+  </script>
+  <script>
     let tokenClient;
     let accessToken = null;
 
@@ -932,6 +1022,11 @@ function herkenMetSpinner() {
     }
   </script>
   <script src="script_tool.js"></script>
+  <script src="parsing.js"></script>
+  <script src="agenda_ui.js"></script>
+  <script src="form_ui.js"></script>
+  <script src="events_api.js"></script>
+  <script src="manual_plus.js"></script>
   <!-- Zwevende + knop -->
   <button id="manual-plus-btn" title="Nieuwe afspraak" style="position:fixed;right:32px;bottom:72px;width:56px;height:56px;border-radius:50%;background:#27ae60;color:#fff;font-size:2.2em;box-shadow:0 2px 8px #0003;z-index:900;border:none;cursor:pointer;">+</button>
 

@@ -1,164 +1,16 @@
+// Globale accessToken zodat deze overal beschikbaar is (beheerd in index.html)
+window.accessToken = window.accessToken || null;
 
-(function ensureGapiLoadedAndCallGapiLoaded() {
-  // Controleer of gapi al beschikbaar is
-  if (window.gapi) {
-    // gapi is al geladen, roep direct gapiLoaded aan
-    if (typeof window.gapiLoaded === 'function') {
-      window.gapiLoaded();
-    }
-    return;
-  }
-
-  // Controleer of het script al bestaat
-  var existingScript = document.querySelector('script[src="https://apis.google.com/js/api.js"]');
-  if (existingScript) {
-    // Voeg een onload toe als het script nog niet geladen is
-    if (!existingScript.hasAttribute('data-gapi-onload')) {
-      existingScript.setAttribute('data-gapi-onload', '1');
-      existingScript.addEventListener('load', function() {
-        if (typeof window.gapiLoaded === 'function') {
-          window.gapiLoaded();
-        }
-      });
-    }
-    return;
-  }
-
-  // Script nog niet aanwezig: injecteer het en stel onload in
-  var script = document.createElement('script');
-  script.src = 'https://apis.google.com/js/api.js';
-  script.async = true;
-  script.defer = true;
-  script.onload = function() {
-    if (typeof window.gapiLoaded === 'function') {
-      window.gapiLoaded();
-    }
-  };
-  document.head.appendChild(script);
-})();
-
-// Globale accessToken zodat deze overal beschikbaar is
-window.accessToken = null;
-
-// --- Google profile/foto patching ---
-function showProfileInfo(token) {
-  console.log('[DEBUG] showProfileInfo aangeroepen met token', token);
-  fetch('https://people.googleapis.com/v1/people/me?personFields=photos,names,emailAddresses', {
-    headers: { Authorization: 'Bearer ' + token }
-  })
-    .then(res => res.json())
-    .then(data => {
-      const profileBox = document.getElementById('profileBox');
-      if (!profileBox) {
-        console.warn('[DEBUG] Geen profileBox gevonden in DOM!');
-        return;
-      }
-      let imgUrl = '';
-      let name = '';
-      if (data.photos && data.photos[0] && data.photos[0].url) {
-        imgUrl = data.photos[0].url;
-      }
-      if (data.names && data.names[0] && data.names[0].displayName) {
-        name = data.names[0].displayName;
-      }
-      console.log('[DEBUG] Profiel data', {imgUrl, name, data});
-      profileBox.innerHTML = imgUrl ? `<img src="${imgUrl}" alt="profiel" style="width:48px;height:48px;border-radius:50%;box-shadow:0 2px 8px #0003;vertical-align:middle;"> <span style='font-size:16px;font-weight:bold;vertical-align:middle;'>${name}</span>` : '';
-      // Login-knop verbergen
-      const loginBtn = document.getElementById('loginButton');
-      if (loginBtn) loginBtn.style.display = 'none';
-    })
-    .catch((e) => {
-      console.error('[DEBUG] Fout bij ophalen profielinfo', e);
-    });
-}
-
-function patchTokenClientCallback() {
-  console.log('[DEBUG] patchTokenClientCallback aangeroepen');
-  if (!window.tokenClient) return;
-  if (window.tokenClient._profilePatched) return;
-  const origCallback = window.tokenClient.callback;
-  window.tokenClient.callback = function(response) {
-    if (response && response.access_token) {
-      console.log('[DEBUG] patchTokenClientCallback: access_token ontvangen', response.access_token);
-      showProfileInfo(response.access_token);
-    }
-    if (typeof origCallback === 'function') origCallback(response);
-  };
-  window.tokenClient._profilePatched = true;
-}
-
-// Variabele om zichtbaarheid login-knop te beheren
-window.loginButtonVisible = true;
-
-function updateLoginButtonVisibility() {
-  var loginBtn = document.getElementById('loginButton');
-  if (loginBtn) loginBtn.style.display = window.loginButtonVisible ? '' : 'none';
-}
-
-function initGoogleLogin() {
-  window.tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: '424624995566-0aprf3c3739snsn0q752kj4slifditj3.apps.googleusercontent.com',
-    scope: 'https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.events',
-    callback: (tokenResponse) => {
-      window.accessToken = tokenResponse.access_token;
-      document.getElementById("status").innerText = "Ingelogd ✔";
-      window.loginButtonVisible = false;
-      updateLoginButtonVisibility();
-    }
-  });
-  patchTokenClientCallback();
-}
+// Login, tokenClient en profiel UI-afhandeling staan nu in index.html
 
 // Start login/init als DOM klaar is en Google geladen is
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Wacht tot google.accounts geladen is
-  function wachtOpGoogle(cb, tries = 0) {
-    if (window.google && window.google.accounts && window.google.accounts.oauth2) {
-      cb();
-    } else if (tries < 30) {
-      setTimeout(() => wachtOpGoogle(cb, tries + 1), 100);
-    } else {
-      console.error('[DEBUG] Google accounts niet gevonden');
-    }
-  }
-  wachtOpGoogle(initGoogleLogin);
-
-  // Login-knop tonen/verbergen bij paginalaad
-  updateLoginButtonVisibility();
-
-  // Periodiek controleren of status 'Ingelogd ✔' is
-  function monitorLoginStatus() {
-    var statusP = document.getElementById('status');
-    var loginBtn = document.getElementById('loginButton');
-    if (statusP && loginBtn) {
-      if (statusP.textContent && statusP.textContent.includes('Ingelogd')) {
-        loginBtn.style.display = 'none';
-      } else {
-        loginBtn.style.display = '';
-      }
-    }
-    setTimeout(monitorLoginStatus, 500);
-  }
-  monitorLoginStatus();
-
-  // Voeg listeners toe voor knoppen
+  // Voeg listeners toe voor knoppen (login wordt beheerd in index.html)
   const herkenBtn = document.getElementById("herkenButton");
   if (herkenBtn) herkenBtn.addEventListener("click", parseEnToon);
   const voegToeBtn = document.getElementById("voegToeButton");
   if (voegToeBtn) voegToeBtn.addEventListener("click", addEvent);
-
-  // Login-knop event listener
-  const loginBtn = document.getElementById('loginButton');
-  if (loginBtn) {
-    loginBtn.addEventListener('click', function() {
-      if (window.tokenClient) {
-        window.tokenClient.requestAccessToken();
-      } else {
-        alert('Google auth is nog niet geladen.');
-      }
-    });
-  }
 
   // Bottom nav bar functionaliteit
   const navAfspraak = document.getElementById('nav-afspraak');
