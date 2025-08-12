@@ -269,7 +269,6 @@
 
   function buildAgendaGrid() {
     const container = document.getElementById('weekAgendaContainer'); if (!container) return;
-    container.innerHTML = '';
     const now = new Date();
     const monday = new Date(now);
     const currentDay = monday.getDay();
@@ -282,6 +281,16 @@
     const dayIndexFromState = typeof window.dayIndexOffset === 'number' ? window.dayIndexOffset : ((new Date().getDay()+6)%7);
     monday.setDate(now.getDate() + diffToMonday + (offset*7));
     monday.setHours(0,0,0,0);
+    // If grid already exists (e.g., after login), only refill events to avoid layout changes
+    const existingAgenda = container.querySelector('.agenda');
+    const existingAllDayBar = container.querySelector('.allday-bar');
+    if (existingAgenda && existingAllDayBar) {
+      const rowPx = mobile ? 96 : 88;
+      vulAfsprakenInGrid(existingAgenda, monday, existingAllDayBar, { mobile, dayIndex: dayIndexFromState, smallScreen: isSmallScreen, rowPx });
+      return;
+    }
+    // Fresh build
+    container.innerHTML = '';
     const weekNum = getWeekNumber(monday);
     const header = document.createElement('div'); header.className = 'agenda-header';
     header.style.cssText = 'height:48px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 12px;background:linear-gradient(145deg, #0d1f2d 0%, #162c40 20%, #1e3a56 45%, #285673 75%, #2e6a85 100%);color:#cdefff;font-size:1.05em;font-weight:700;touch-action:none;-webkit-user-select:none;user-select:none;border-radius:20px 20px 0 0;box-shadow:0 8px 32px 0 rgba(80,180,240,0.16);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1.5px solid rgba(255,255,255,0.12)';
@@ -427,4 +436,23 @@
   ns.nextWeek = function(){ window.weekOffset = (typeof window.weekOffset==='number'?window.weekOffset:0) + 1; buildAgendaGrid(); };
   ns.prevWeek = function(){ window.weekOffset = (typeof window.weekOffset==='number'?window.weekOffset:0) - 1; buildAgendaGrid(); };
   ns.thisWeek = function(){ window.weekOffset = 0; buildAgendaGrid(); };
+  // Refill helper: vul alleen afspraken in op bestaande grid (gebruik in login-callback)
+  ns.refillAgenda = function(){
+    const container = document.getElementById('weekAgendaContainer'); if (!container) return;
+    const agenda = container.querySelector('.agenda'); const allDayBar = container.querySelector('.allday-bar');
+    if (!agenda || !allDayBar) { buildAgendaGrid(); return; }
+    const now = new Date();
+    const monday = new Date(now);
+    const currentDay = monday.getDay();
+    const diffToMonday = (currentDay === 0 ? -6 : 1) - currentDay;
+    const offset = (typeof window.weekOffset === 'number') ? window.weekOffset : 0;
+    monday.setDate(now.getDate() + diffToMonday + (offset*7));
+    monday.setHours(0,0,0,0);
+    const isSmallScreen = isMobile();
+    const preferWeekOnMobile = (typeof window.preferWeekOnMobile === 'boolean') ? window.preferWeekOnMobile : true;
+    const mobile = isSmallScreen && !preferWeekOnMobile;
+    const dayIndexFromState = typeof window.dayIndexOffset === 'number' ? window.dayIndexOffset : ((new Date().getDay()+6)%7);
+    const rowPx = mobile ? 96 : 88;
+    vulAfsprakenInGrid(agenda, monday, allDayBar, { mobile, dayIndex: dayIndexFromState, smallScreen: isSmallScreen, rowPx });
+  };
 })();
