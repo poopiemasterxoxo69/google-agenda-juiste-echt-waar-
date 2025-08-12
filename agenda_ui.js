@@ -269,6 +269,8 @@
 
   function buildAgendaGrid() {
     const container = document.getElementById('weekAgendaContainer'); if (!container) return;
+    // Fixed grid behavior: by default, do NOT rebuild grid if it already exists
+    const lock = (typeof window.lockAgendaGrid === 'boolean') ? window.lockAgendaGrid : true;
     const now = new Date();
     const monday = new Date(now);
     const currentDay = monday.getDay();
@@ -284,7 +286,7 @@
     // If grid already exists (e.g., after login), only refill events to avoid layout changes
     const existingAgenda = container.querySelector('.agenda');
     const existingAllDayBar = container.querySelector('.allday-bar');
-    if (existingAgenda && existingAllDayBar) {
+    if (existingAgenda && existingAllDayBar && lock) {
       const rowPx = mobile ? 96 : 88;
       vulAfsprakenInGrid(existingAgenda, monday, existingAllDayBar, { mobile, dayIndex: dayIndexFromState, smallScreen: isSmallScreen, rowPx });
       return;
@@ -368,6 +370,8 @@
       }
     }
     container.appendChild(agenda);
+    // mark initialized to allow refills later without rebuild
+    window.agendaGridInitialized = true;
 
     // Scroll naar huidige tijd (indien deze week)
     if (!mobile && offset === 0) {
@@ -436,6 +440,15 @@
   ns.nextWeek = function(){ window.weekOffset = (typeof window.weekOffset==='number'?window.weekOffset:0) + 1; buildAgendaGrid(); };
   ns.prevWeek = function(){ window.weekOffset = (typeof window.weekOffset==='number'?window.weekOffset:0) - 1; buildAgendaGrid(); };
   ns.thisWeek = function(){ window.weekOffset = 0; buildAgendaGrid(); };
+  // Initialize once helper to guarantee a fixed grid
+  ns.initAgendaGridOnce = function(){
+    const container = document.getElementById('weekAgendaContainer'); if (!container) return;
+    const agenda = container.querySelector('.agenda'); const allDayBar = container.querySelector('.allday-bar');
+    if (agenda && allDayBar) { ns.refillAgenda(); return; }
+    // Allow single build, then lock grid
+    window.lockAgendaGrid = true;
+    buildAgendaGrid();
+  };
   // Refill helper: vul alleen afspraken in op bestaande grid (gebruik in login-callback)
   ns.refillAgenda = function(){
     const container = document.getElementById('weekAgendaContainer'); if (!container) return;
