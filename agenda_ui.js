@@ -112,6 +112,11 @@
     // Consistente schaal: pixels per minuut op basis van rijhoogte (rowPx)
     const rowPxOpt = typeof options.rowPx === 'number' ? options.rowPx : (mobile ? 72 : 80);
     const ppm = rowPxOpt / 60; // pixels per minuut
+    // Clear vorige rendering zonder grid te slopen
+    try {
+      agenda.querySelectorAll('.day-layer').forEach(n=>n.remove());
+      allDayBar.querySelectorAll('.allday-chip').forEach(n=>n.remove());
+    } catch(e) { /* ignore */ }
     const colorMap = { '1': '#a4bdfc', '2': '#7ae7bf', '3': '#dbadff', '4': '#ff887c', '5': '#fbd75b', '6': '#ffb878', '7': '#46d6db', '8': '#e1e1e1', '9': '#5484ed', '10': '#51b749', '11': '#dc2127' };
     const start = new Date(monday);
     const eind = new Date(monday); eind.setDate(start.getDate()+6); eind.setHours(23,59,59,999);
