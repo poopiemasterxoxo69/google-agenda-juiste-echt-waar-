@@ -171,11 +171,11 @@
           const cell = agenda.querySelector(`.agenda-cel[data-dag='${colIndex}'][data-uur='${uur}']`);
           if (cell) {
             const taak = document.createElement('div'); taak.className = 'taak'; taak.textContent = event.summary || '(geen titel)';
-            const unit = 54; // px per uur (iets compacter op mobiel)
-            taak.style.position = 'absolute'; taak.style.left = (6 + i*(100/n)) + 'px'; taak.style.width = `calc(${100/n}% - 12px)`; taak.style.top = (6 + (startMin/60)*unit) + 'px'; taak.style.height = (duration/60*unit) + 'px';
+            const unit = mobile ? 80 : 54; // px per uur (groter voor mobile)
+            taak.style.position = 'absolute'; taak.style.left = (6 + i*(100/n)) + 'px'; taak.style.width = mobile ? 'calc(100% - 12px)' : `calc(${100/n}% - 12px)`; taak.style.top = (6 + (startMin/60)*unit) + 'px'; taak.style.height = (duration/60*unit) + 'px';
             let kleur = '#4285f4'; if (event.colorId && colorMap[event.colorId]) kleur = colorMap[event.colorId];
             const gradient = `linear-gradient(180deg, ${kleur} 0%, ${kleur}CC 85%)`;
-            taak.style.background = gradient; taak.style.border = '1px solid rgba(255,255,255,0.22)'; taak.style.color = '#fff'; taak.style.borderRadius = '12px'; taak.style.padding = '10px 12px'; taak.style.fontSize = mobile ? '16px' : '15px'; taak.style.zIndex = 2; taak.style.boxShadow = '0 4px 16px #0004, inset 0 1px 0 rgba(255,255,255,0.25)'; taak.style.whiteSpace = 'normal'; taak.style.overflow = 'visible'; taak.style.cursor = 'pointer'; taak.style.minHeight = '46px'; taak.style.lineHeight = '1.2'; taak.style.wordWrap = 'break-word';
+            taak.style.background = gradient; taak.style.border = '1px solid rgba(255,255,255,0.22)'; taak.style.color = '#fff'; taak.style.borderRadius = '12px'; taak.style.padding = '10px 12px'; taak.style.fontSize = mobile ? '16px' : '15px'; taak.style.zIndex = 2; taak.style.boxShadow = '0 4px 16px #0004, inset 0 1px 0 rgba(255,255,255,0.25)'; taak.style.whiteSpace = 'normal'; taak.style.overflow = 'hidden'; taak.style.cursor = 'pointer'; taak.style.minHeight = mobile ? '60px' : '46px'; taak.style.lineHeight = '1.3'; taak.style.wordWrap = 'break-word';
             // Show longer titles on small screens: wrap to multiple lines with clamp
             if (options.smallScreen) {
               taak.style.whiteSpace = 'normal';
@@ -271,7 +271,7 @@
     for (let i=0; i<(mobile?1:7); ++i) { const d = document.createElement('div'); d.className = 'allday-cel'; d.style.cssText = `position:relative;height:${mobile?'44px':'36px'};`; allDayBar.appendChild(d); }
     container.appendChild(allDayBar);
     const agenda = document.createElement('div'); agenda.className = 'agenda';
-    const rowPx = mobile ? 54 : 60; // per uur
+    const rowPx = mobile ? 80 : 60; // per uur (groter voor mobile)
     agenda.style.cssText = `display:grid;grid-template-columns:60px repeat(${mobile?1:7},1fr);grid-template-rows:repeat(24,${rowPx}px);height:calc(100vh - ${mobile? '150px':'144px'});overflow-y:auto;background:linear-gradient(145deg, #0d1f2d 0%, #162c40 20%, #1e3a56 45%, #285673 75%, #2e6a85 100%);position:relative;-webkit-user-select:none;user-select:none;scroll-behavior:smooth;border-radius:0 0 22px 22px;box-shadow:0 8px 32px 0 rgba(80,180,240,0.13);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);`;
     agenda.tabIndex = 0;
     // Bereken zichtbare datums voor kolommen
@@ -319,7 +319,7 @@
       const nu = new Date();
       const visibleDate = new Date(monday); visibleDate.setDate(monday.getDate()+dayIndexFromState);
       if (isSameDay(nu, visibleDate)) {
-        const top = (nu.getHours()*54 + nu.getMinutes());
+        const top = (nu.getHours()*80 + nu.getMinutes());
         agenda.scrollTop = Math.max(0, top - 140);
         const uur = nu.getHours();
         const cel = agenda.querySelector(`.agenda-cel[data-dag='0'][data-uur='${uur}']`);
@@ -327,7 +327,7 @@
           const line = document.createElement('div');
           line.className = 'now-line';
           line.style.cssText = 'position:absolute;left:0;right:0;height:2px;background:#ea4335;box-shadow:0 0 0 1px #ea4335;z-index:3;';
-          line.style.top = (nu.getMinutes()*0.9) + 'px';
+          line.style.top = (nu.getMinutes()*1.3) + 'px';
           cel.appendChild(line);
         }
       }
