@@ -165,6 +165,23 @@
         // z-index laag houden zodat gridlijnen zichtbaar blijven; events zelf krijgen hogere z-index
         layer.style.cssText = `grid-column:${colIndex} / ${colIndex+1};grid-row:1 / ${24+1};position:relative;z-index:1;pointer-events:none;`;
         agenda.appendChild(layer);
+        // Voeg zichtbare gridlijnen toe binnen de day-layer, zodat de 24-uurs grid altijd zichtbaar blijft
+        if (!layer.querySelector('.grid-lines')) {
+          const lines = document.createElement('div');
+          lines.className = 'grid-lines';
+          lines.style.cssText = 'position:absolute;left:6px;right:6px;top:0;bottom:0;pointer-events:none;z-index:4;';
+          for (let uur=0; uur<24; uur++) {
+            const y = uur * rowPxOpt;
+            const hour = document.createElement('div');
+            hour.style.cssText = `position:absolute;left:0;right:0;top:${y}px;height:1px;background:rgba(255,255,255,0.12);`;
+            lines.appendChild(hour);
+            // half uur
+            const half = document.createElement('div');
+            half.style.cssText = `position:absolute;left:0;right:0;top:${y + (rowPxOpt/2)}px;height:1px;background:rgba(255,255,255,0.10);`;
+            lines.appendChild(half);
+          }
+          layer.appendChild(lines);
+        }
         return layer;
       }
 
