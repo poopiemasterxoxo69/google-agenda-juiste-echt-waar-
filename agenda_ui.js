@@ -274,7 +274,7 @@
     for (let i=0; i<(mobile?1:7); ++i) { const d = document.createElement('div'); d.className = 'allday-cel'; d.style.cssText = `position:relative;height:${mobile?'44px':'36px'};`; allDayBar.appendChild(d); }
     container.appendChild(allDayBar);
     const agenda = document.createElement('div'); agenda.className = 'agenda';
-    const rowPx = mobile ? 54 : 60; // per uur
+    const rowPx = mobile ? 72 : 80; // per uur - vergroot voor betere leesbaarheid
     agenda.style.cssText = `display:grid;grid-template-columns:60px repeat(${mobile?1:7},1fr);grid-template-rows:repeat(24,${rowPx}px);height:calc(100vh - ${mobile? '150px':'144px'});overflow-y:auto;background:linear-gradient(145deg, #0d1f2d 0%, #162c40 20%, #1e3a56 45%, #285673 75%, #2e6a85 100%);position:relative;-webkit-user-select:none;user-select:none;scroll-behavior:smooth;border-radius:0 0 22px 22px;box-shadow:0 8px 32px 0 rgba(80,180,240,0.13);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);`;
     agenda.tabIndex = 0;
     // Bereken zichtbare datums voor kolommen
