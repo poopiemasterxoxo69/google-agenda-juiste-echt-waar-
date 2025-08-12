@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Agenda Tool</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
   
   <!-- iOS Web App Meta Tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -26,6 +26,21 @@
       --glass-blur: blur(16px);
       --shadow-dark: 0 10px 30px rgba(0, 0, 0, 0.3);
     }
+
+    /* Prevent input zoom on iOS and tune layout for small screens */
+    input, select, textarea { font-size: 16px; }
+    @media (max-width: 420px) {
+      body { padding: 1rem; }
+      h1 { font-size: 1.6rem; margin-bottom: 1rem; }
+      #manual-plus-btn {
+        right: max(16px, env(safe-area-inset-right));
+        bottom: calc(16px + env(safe-area-inset-bottom));
+        bottom: calc(16px + constant(safe-area-inset-bottom));
+        width: 56px; height: 56px; font-size: 2rem;
+      }
+      .afspraak-card, #output, #meerdereOutput { padding: 14px; }
+      button { padding: 0.75rem 1.1rem; }
+    }
     * { box-sizing: border-box; }
     html {
   background: var(--bg-dark);
@@ -35,10 +50,22 @@ body {
   font-family: 'Quicksand', 'Segoe UI', 'Frutiger', 'Arial', sans-serif;
   background: transparent;
   color: var(--text-dark);
-  margin: 0; padding: 2rem;
+  margin: 0;
+  padding: 2rem;
+  padding-top: max(2rem, env(safe-area-inset-top));
+  /* Respect iOS safe areas */
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-bottom: max(2rem, env(safe-area-inset-bottom));
   max-width: 720px; margin-inline: auto;
   transition: background 0.5s, color 0.5s;
   position: relative; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  -webkit-tap-highlight-color: rgba(0,0,0,0);
+}
+/* Ensure scroll momentum in key containers on iOS */
+#agendaView, #output, #meerdereOutput {
+  -webkit-overflow-scrolling: touch;
 }
     h1 { text-align: center; font-size: 2.2rem; margin-bottom: 2rem; text-shadow: 0 1px 2px rgba(255,255,255,0.5); }
     .bubble-background { position: fixed; top:0; left:0; z-index:-1; width:100vw; height:100vh; overflow:hidden; pointer-events:none; }
@@ -292,8 +319,10 @@ button::after, #voegToeButton::after, #herkenButton::after {
 }
     #manual-plus-btn {
       position: fixed !important;
-      right: 32px;
-      bottom: 72px;
+      right: max(24px, env(safe-area-inset-right));
+      /* Keep clear of iOS home indicator */
+      bottom: calc(24px + env(safe-area-inset-bottom));
+      bottom: calc(24px + constant(safe-area-inset-bottom)); /* iOS < 11.2 fallback */
       width: 64px;
       height: 64px;
       border-radius: 50%;
@@ -518,7 +547,7 @@ button::after, #voegToeButton::after, #herkenButton::after {
   <canvas id="bubble-canvas"></canvas>
   <div id="main-content">
     <div id="profileBox" style="position:fixed;top:20px;right:32px;z-index:1000;"></div>
-    <h1>Agenda Tool46</h1>
+    <h1>Agenda Tool36</h1>
   <div id="g_id_onload"
      data-client_id="YOUR_CLIENT_ID"
      data-callback="handleCredentialResponse"
@@ -1098,8 +1127,8 @@ function herkenMetSpinner() {
       alert(`${toegevoegd} afspraak/afspraken toegevoegd aan je Google Agenda!${details}`);
     }
   </script>
-  <script src="script_tool.js"></script>
   <script src="parsing.js"></script>
+  <script src="script_tool.js"></script>
   <script src="agenda_ui.js"></script>
   <script src="form_ui.js"></script>
   <script src="events_api.js"></script>
