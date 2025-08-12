@@ -175,7 +175,7 @@
             taak.style.position = 'absolute'; taak.style.left = (6 + i*(100/n)) + 'px'; taak.style.width = `calc(${100/n}% - 12px)`; taak.style.top = (6 + (startMin/60)*unit) + 'px'; taak.style.height = (duration/60*unit) + 'px';
             let kleur = '#4285f4'; if (event.colorId && colorMap[event.colorId]) kleur = colorMap[event.colorId];
             const gradient = `linear-gradient(180deg, ${kleur} 0%, ${kleur}CC 85%)`;
-            taak.style.background = gradient; taak.style.border = '1px solid rgba(255,255,255,0.22)'; taak.style.color = '#fff'; taak.style.borderRadius = '12px'; taak.style.padding = '10px 12px'; taak.style.fontSize = mobile ? '16px' : '15px'; taak.style.zIndex = 2; taak.style.boxShadow = '0 4px 16px #0004, inset 0 1px 0 rgba(255,255,255,0.25)'; taak.style.whiteSpace = 'nowrap'; taak.style.overflow = 'hidden'; taak.style.textOverflow = 'ellipsis'; taak.style.cursor = 'pointer'; taak.style.minHeight = '46px';
+            taak.style.background = gradient; taak.style.border = '1px solid rgba(255,255,255,0.22)'; taak.style.color = '#fff'; taak.style.borderRadius = '12px'; taak.style.padding = '10px 12px'; taak.style.fontSize = mobile ? '16px' : '15px'; taak.style.zIndex = 2; taak.style.boxShadow = '0 4px 16px #0004, inset 0 1px 0 rgba(255,255,255,0.25)'; taak.style.whiteSpace = 'normal'; taak.style.overflow = 'visible'; taak.style.cursor = 'pointer'; taak.style.minHeight = '46px'; taak.style.lineHeight = '1.2'; taak.style.wordWrap = 'break-word';
             // Show longer titles on small screens: wrap to multiple lines with clamp
             if (options.smallScreen) {
               taak.style.whiteSpace = 'normal';
