@@ -20,6 +20,49 @@
     const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
     return weekNo;
   }
+
+  // Expand/collapse task cards on small screens to reveal full title
+  let expandListenerBound = false;
+  function bindGlobalCollapseListener(){
+    if (expandListenerBound) return; expandListenerBound = true;
+    document.addEventListener('mousedown', (e)=>{
+      document.querySelectorAll('.taak[data-expanded="true"]').forEach(el=>{
+        if (!el.contains(e.target)) collapseTask(el);
+      });
+    });
+    document.addEventListener('touchstart', (e)=>{
+      document.querySelectorAll('.taak[data-expanded="true"]').forEach(el=>{
+        if (!el.contains(e.target)) collapseTask(el);
+      });
+    }, {passive:true});
+  }
+  function expandTask(el){
+    if (el.dataset.expanded === 'true') return;
+    el.dataset.expanded = 'true';
+    // store original styles
+    el.dataset.origHeight = el.style.height || '';
+    el.dataset.origZ = el.style.zIndex || '';
+    el.style.height = 'auto';
+    el.style.maxHeight = 'none';
+    el.style.whiteSpace = 'normal';
+    el.style.textOverflow = 'clip';
+    el.style.overflow = 'auto';
+    el.style.display = 'block';
+    el.style.zIndex = '99';
+    el.style.boxShadow = '0 8px 24px #0006, inset 0 1px 0 rgba(255,255,255,0.25)';
+  }
+  function collapseTask(el){
+    if (el.dataset.expanded !== 'true') return;
+    el.dataset.expanded = 'false';
+    el.style.height = el.dataset.origHeight || '';
+    el.style.maxHeight = '';
+    el.style.whiteSpace = '';
+    el.style.textOverflow = '';
+    el.style.overflow = 'hidden';
+    el.style.display = '-webkit-box';
+    el.style.zIndex = el.dataset.origZ || '';
+    el.style.boxShadow = '0 4px 16px #0004, inset 0 1px 0 rgba(255,255,255,0.25)';
+  }
   function isSameDay(a,b) {
     return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
   }
@@ -144,9 +187,17 @@
               taak.style.lineHeight = '1.2';
               taak.style.fontSize = '14px';
             }
-            // Full text via native tooltip as fallback
+            // Interaction: on small screens, tap expands to show full content; otherwise show tooltip
             taak.title = event.summary || '(geen titel)';
-            taak.onclick = e => showEventTooltip(event, e.target);
+            if (options.smallScreen) {
+              bindGlobalCollapseListener();
+              taak.addEventListener('click', (e)=>{
+                e.stopPropagation();
+                if (taak.dataset.expanded === 'true') collapseTask(taak); else expandTask(taak);
+              });
+            } else {
+              taak.onclick = e => showEventTooltip(event, e.target);
+            }
             cell.appendChild(taak);
           }
         });
