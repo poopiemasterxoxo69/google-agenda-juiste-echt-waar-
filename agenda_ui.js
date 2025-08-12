@@ -175,21 +175,27 @@
             taak.style.position = 'absolute'; taak.style.left = (6 + i*(100/n)) + 'px'; taak.style.width = `calc(${100/n}% - 12px)`; taak.style.top = (6 + (startMin/60)*unit) + 'px'; taak.style.height = (duration/60*unit) + 'px';
             let kleur = '#4285f4'; if (event.colorId && colorMap[event.colorId]) kleur = colorMap[event.colorId];
             const gradient = `linear-gradient(180deg, ${kleur} 0%, ${kleur}CC 85%)`;
-            taak.style.background = gradient; 
-            taak.style.border = '1px solid rgba(255,255,255,0.22)'; 
+            // Stijl voor afspraakblokken zoals in de afbeelding
+            taak.style.background = kleur; // Gebruik effen kleur in plaats van gradient
+            taak.style.border = 'none'; // Geen rand
             taak.style.color = '#ffffff'; 
-            taak.style.borderRadius = '12px'; 
-            taak.style.padding = '10px 12px'; 
-            taak.style.fontSize = mobile ? '16px' : '15px'; 
+            taak.style.borderRadius = '8px'; // Minder ronde hoeken
+            taak.style.padding = '8px 10px'; 
+            taak.style.fontSize = mobile ? '14px' : '13px'; 
+            taak.style.fontWeight = '500'; // Iets dikkere tekst
             taak.style.zIndex = 2; 
-            taak.style.boxShadow = '0 4px 16px #0004, inset 0 1px 0 rgba(255,255,255,0.25)'; 
+            taak.style.boxShadow = 'none'; // Geen schaduw
             taak.style.whiteSpace = 'normal'; 
-            taak.style.overflow = 'visible'; 
+            taak.style.overflow = 'hidden'; // Verberg overflow
             taak.style.cursor = 'pointer'; 
-            taak.style.minHeight = '46px'; 
-            taak.style.lineHeight = '1.3'; 
+            taak.style.minHeight = 'auto'; // Geen vaste minimale hoogte
+            taak.style.lineHeight = '1.2'; 
             taak.style.wordWrap = 'break-word';
-            taak.style.textShadow = '0 1px 2px rgba(0,0,0,0.3)';
+            taak.style.textShadow = 'none'; // Geen tekstschaduw
+            taak.style.margin = '1px 2px'; // Kleine marge tussen blokken
+            taak.style.display = 'flex';
+            taak.style.alignItems = 'center';
+            taak.style.justifyContent = 'flex-start';
             // Interaction: on small screens, tap expands to show full content; otherwise show tooltip
             taak.title = event.summary || '(geen titel)';
             if (options.smallScreen) {
