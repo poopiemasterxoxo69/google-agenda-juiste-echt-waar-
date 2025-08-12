@@ -92,6 +92,14 @@
         const colStart = mobile ? 2 : (startIndex+2);
         const colEnd = mobile ? 3 : (endIndexExclusive+2);
         chip.style.cssText = `grid-column:${colStart} / ${colEnd};align-self:center;justify-self:stretch;margin:4px;min-height:32px;padding:8px 12px;background:${kleur};color:#fff;font-size:15px;border-radius:16px;box-shadow:0 2px 10px #0004;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
+        // On small screens, allow multi-line titles for all-day chips
+        if (options.smallScreen) {
+          chip.style.whiteSpace = 'normal';
+          chip.style.textOverflow = 'clip';
+          chip.style.lineHeight = '1.2';
+          chip.style.minHeight = '36px';
+          chip.style.fontSize = '14px';
+        }
         chip.onclick = e => showEventTooltip(event, e.target);
         allDayBar.appendChild(chip);
       });
@@ -125,6 +133,19 @@
             let kleur = '#4285f4'; if (event.colorId && colorMap[event.colorId]) kleur = colorMap[event.colorId];
             const gradient = `linear-gradient(180deg, ${kleur} 0%, ${kleur}CC 85%)`;
             taak.style.background = gradient; taak.style.border = '1px solid rgba(255,255,255,0.22)'; taak.style.color = '#fff'; taak.style.borderRadius = '12px'; taak.style.padding = '10px 12px'; taak.style.fontSize = mobile ? '16px' : '15px'; taak.style.zIndex = 2; taak.style.boxShadow = '0 4px 16px #0004, inset 0 1px 0 rgba(255,255,255,0.25)'; taak.style.whiteSpace = 'nowrap'; taak.style.overflow = 'hidden'; taak.style.textOverflow = 'ellipsis'; taak.style.cursor = 'pointer'; taak.style.minHeight = '46px';
+            // Show longer titles on small screens: wrap to multiple lines with clamp
+            if (options.smallScreen) {
+              taak.style.whiteSpace = 'normal';
+              taak.style.textOverflow = 'clip';
+              taak.style.overflow = 'hidden';
+              taak.style.display = '-webkit-box';
+              taak.style.webkitBoxOrient = 'vertical';
+              taak.style.webkitLineClamp = '10';
+              taak.style.lineHeight = '1.2';
+              taak.style.fontSize = '14px';
+            }
+            // Full text via native tooltip as fallback
+            taak.title = event.summary || '(geen titel)';
             taak.onclick = e => showEventTooltip(event, e.target);
             cell.appendChild(taak);
           }
@@ -142,8 +163,9 @@
     const diffToMonday = (currentDay === 0 ? -6 : 1) - currentDay;
     const offset = (typeof window.weekOffset === 'number') ? window.weekOffset : 0;
     // Prefer a full week view on small screens too unless explicitly disabled
+    const isSmallScreen = isMobile();
     const preferWeekOnMobile = (typeof window.preferWeekOnMobile === 'boolean') ? window.preferWeekOnMobile : true;
-    const mobile = isMobile() && !preferWeekOnMobile;
+    const mobile = isSmallScreen && !preferWeekOnMobile;
     const dayIndexFromState = typeof window.dayIndexOffset === 'number' ? window.dayIndexOffset : ((new Date().getDay()+6)%7);
     monday.setDate(now.getDate() + diffToMonday + (offset*7));
     monday.setHours(0,0,0,0);
@@ -283,7 +305,7 @@
         touchStartX = null;
       }
     });
-    vulAfsprakenInGrid(agenda, monday, allDayBar, { mobile, dayIndex: dayIndexFromState });
+    vulAfsprakenInGrid(agenda, monday, allDayBar, { mobile, dayIndex: dayIndexFromState, smallScreen: isSmallScreen });
   }
 
   ns.vulAfsprakenInGrid = vulAfsprakenInGrid; window.vulAfsprakenInGrid = vulAfsprakenInGrid;
