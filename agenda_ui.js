@@ -149,96 +149,115 @@
         chip.onclick = e => showEventTooltip(event, e.target);
         allDayBar.appendChild(chip);
       });
-      // Bouw per uur-cel segmenten met exacte minuut-positie en -duur
-      const cellSegments = {};
+      // Maak per-dag overlay-lagen (spannen alle 24 uur) en plaats één doorlopend blok per event-segment (alleen splitsen op daggrens)
+      function getDayLayer(dagIndex) {
+        const colIndex = mobile ? 2 : (2 + dagIndex); // grid kolommen: 1 = tijd, dagen starten op 2
+        let layer = agenda.querySelector(`.day-layer[data-dag='${dagIndex}']`);
+        if (layer) return layer;
+        layer = document.createElement('div');
+        layer.className = 'day-layer';
+        layer.dataset.dag = String(dagIndex);
+        layer.style.cssText = `grid-column:${colIndex} / ${colIndex+1};grid-row:1 / ${24+1};position:relative;z-index:2;pointer-events:none;`;
+        agenda.appendChild(layer);
+        return layer;
+      }
+
+      // Verzamel segments per dag (splits uitsluitend op daggrens)
+      const daySegments = {};
       events.filter(e=>e.start.dateTime && e.end.dateTime).forEach(event => {
-        const startDate = new Date(event.start.dateTime);
-        const endDate = new Date(event.end.dateTime);
-        const dagIndex = (startDate.getDay()+6)%7;
-        if (mobile && (dagIndex < dayStartIndex || dagIndex >= dayStartIndex+visibleDays)) return;
-        // Loop door alle betrokken uren en maak per uur een segment
-        let iter = new Date(startDate);
-        while (iter < endDate) {
-          const uur = iter.getHours();
-          const hourStart = new Date(iter); hourStart.setMinutes(0,0,0);
-          const hourEnd = new Date(hourStart); hourEnd.setHours(hourEnd.getHours()+1);
-          const segStartMin = Math.max(0, Math.min(60, Math.round((iter - hourStart)/60000)));
-          const segEndMin = Math.max(0, Math.min(60, Math.round((endDate - hourStart)/60000)));
-          const segDur = Math.max(1, segEndMin - segStartMin); // minstens 1 minuut zichtbaar
-          const key = `${dagIndex}-${uur}`;
-          if (!cellSegments[key]) cellSegments[key] = [];
-          cellSegments[key].push({ event, startMin: segStartMin, endMin: segEndMin, durMin: segDur });
-          iter = hourEnd; // volgende uur
+        let s = new Date(event.start.dateTime);
+        let e = new Date(event.end.dateTime);
+        // Normalize ms
+        s = new Date(s.getFullYear(), s.getMonth(), s.getDate(), s.getHours(), s.getMinutes(), 0, 0);
+        e = new Date(e.getFullYear(), e.getMonth(), e.getDate(), e.getHours(), e.getMinutes(), 0, 0);
+        let iter = new Date(s);
+        while (iter < e) {
+          const dagIndex = (iter.getDay()+6)%7;
+          if (!mobile || (dagIndex >= dayStartIndex && dagIndex < dayStartIndex+visibleDays)) {
+            const dayStart = new Date(iter); dayStart.setHours(0,0,0,0);
+            const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate()+1);
+            const segStart = new Date(Math.max(iter, dayStart));
+            const segEnd = new Date(Math.min(e, dayEnd));
+            const startMin = Math.max(0, Math.min(1440, Math.round((segStart - dayStart)/60000)));
+            const endMin = Math.max(0, Math.min(1440, Math.round((segEnd - dayStart)/60000)));
+            if (endMin > startMin) {
+              const key = String(dagIndex);
+              if (!daySegments[key]) daySegments[key] = [];
+              daySegments[key].push({ event, startMin, endMin });
+            }
+          }
+          // Volgende dag
+          const nextDay = new Date(iter); nextDay.setHours(24,0,0,0);
+          iter = nextDay;
         }
       });
-      // Plaats per cel, met kolomindeling voor overlappende segmenten
-      for (const key in cellSegments) {
-        const [dagIndex, uur] = key.split('-').map(Number);
-        const segments = cellSegments[key].sort((a,b)=> a.startMin - b.startMin || a.endMin - b.endMin);
-        // Kolommen toewijzen: eenvoudige greedy allocator
-        const cols = []; // elke kolom bewaart laatst eindMin
-        segments.forEach(seg => {
-          let placedCol = 0;
-          for (let c=0; c<cols.length; c++) { if (cols[c] <= seg.startMin) { placedCol = c; break; } placedCol = cols.length; }
-          if (placedCol === cols.length) cols.push(seg.endMin); else cols[placedCol] = seg.endMin;
-          seg.col = placedCol; seg.colCount = cols.length;
+
+      // Overlap-inrichting per dag: kolommen toewijzen per cluster en renderen in de day-layer
+      const gutterPx = 4;
+      Object.keys(daySegments).forEach(key => {
+        const dagIndex = Number(key);
+        const segs = daySegments[key].sort((a,b)=> a.startMin - b.startMin || a.endMin - b.endMin);
+        // Clusters bepalen en kolommen toewijzen
+        let clusterId = 0;
+        let active = [];
+        segs.forEach(seg => {
+          // Cleanup actieve die niet meer overlappen
+          active = active.filter(a => a.endMin > seg.startMin);
+          // Kolom kiezen
+          const usedCols = new Set(active.map(a=>a.col));
+          let col = 0; while (usedCols.has(col)) col++;
+          seg.col = col;
+          // Cluster logic: als active leeg -> nieuwe cluster
+          if (active.length === 0) clusterId++;
+          seg.cluster = clusterId;
+          active.push(seg);
         });
-        const colIndex = mobile ? 0 : dagIndex;
-        const cell = agenda.querySelector(`.agenda-cel[data-dag='${colIndex}'][data-uur='${uur}']`);
-        if (!cell) continue;
-        const gutterPx = 4; // kleine marge tussen blokken
-        segments.forEach(seg => {
+        // Bepaal clusterSize
+        const clusterSize = {};
+        segs.forEach(seg => { clusterSize[seg.cluster] = Math.max(clusterSize[seg.cluster]||0, seg.col+1); });
+        // Render
+        const layer = getDayLayer(dagIndex);
+        segs.forEach(seg => {
           const taak = document.createElement('div');
           taak.className = 'taak';
           taak.textContent = seg.event.summary || '(geen titel)';
-          // Positie/afmeting exact op basis van minuten
-          const totalGutter = (seg.colCount + 1) * gutterPx;
-          const availWidth = cell.clientWidth ? (cell.clientWidth - totalGutter) : 0; // beste gok; valt terug op % indien 0
-          const widthPct = 100 / seg.colCount;
-          // Gebruik CSS calc zodat layout niet afhankelijk is van clientWidth
+          const cols = clusterSize[seg.cluster] || 1;
+          const widthPct = 100/cols;
           taak.style.position = 'absolute';
           taak.style.left = `calc(${widthPct*seg.col}% + ${gutterPx}px)`;
           taak.style.width = `calc(${widthPct}% - ${gutterPx*2}px)`;
           taak.style.top = (seg.startMin * ppm) + 'px';
-          taak.style.height = (Math.max(1, seg.durMin) * ppm) + 'px';
-          // Stijl en leesbaarheid
-          let kleur = '#4285f4';
-          if (seg.event.colorId && colorMap[seg.event.colorId]) kleur = colorMap[seg.event.colorId];
+          taak.style.height = ((seg.endMin - seg.startMin) * ppm) + 'px';
+          let kleur = '#4285f4'; if (seg.event.colorId && colorMap[seg.event.colorId]) kleur = colorMap[seg.event.colorId];
           taak.style.background = kleur;
           taak.style.border = 'none';
           taak.style.color = '#ffffff';
           taak.style.borderRadius = '8px';
           taak.style.padding = '6px 8px';
-          // Dynamische fontgrootte op basis van hoogte
-          const base = mobile ? 14 : 13;
-          const fs = Math.max(10, Math.min(base, base * (parseFloat(taak.style.height)/ (rowPxOpt*0.8))));
+          const base = mobile ? 14 : 13; const fs = Math.max(10, Math.min(base, base * (((seg.endMin - seg.startMin) * ppm)/ (rowPxOpt*0.8))));
           taak.style.fontSize = fs + 'px';
           taak.style.fontWeight = '500';
-          taak.style.zIndex = 2;
-          taak.style.boxShadow = 'none';
-          taak.style.whiteSpace = 'normal';
-          taak.style.overflow = 'hidden';
+          taak.style.zIndex = 3;
           taak.style.boxSizing = 'border-box';
-          taak.style.cursor = 'pointer';
-          taak.style.lineHeight = '1.2';
+          taak.style.whiteSpace = 'normal';
           taak.style.wordBreak = 'break-word';
           taak.style.overflowWrap = 'anywhere';
+          taak.style.overflow = 'hidden';
           taak.style.textOverflow = 'clip';
-          taak.style.display = 'block'; // altijd linksboven starten
+          taak.style.cursor = 'pointer';
+          taak.style.lineHeight = '1.2';
+          taak.style.pointerEvents = 'auto'; // layer heeft pointer-events:none
           // Interactie
           taak.title = seg.event.summary || '(geen titel)';
           if (options.smallScreen) {
             bindGlobalCollapseListener();
-            taak.addEventListener('click', (e)=>{
-              e.stopPropagation();
-              if (taak.dataset.expanded === 'true') collapseTask(taak); else expandTask(taak);
-            });
+            taak.addEventListener('click', (e)=>{ e.stopPropagation(); if (taak.dataset.expanded === 'true') collapseTask(taak); else expandTask(taak); });
           } else {
             taak.onclick = e => showEventTooltip(seg.event, e.target);
           }
-          cell.appendChild(taak);
+          layer.appendChild(taak);
         });
-      }
+      });
     });
   }
 
@@ -308,7 +327,7 @@
     for (let i=0; i<(mobile?1:7); ++i) { const d = document.createElement('div'); d.className = 'allday-cel'; d.style.cssText = `position:relative;height:${mobile?'44px':'36px'};`; allDayBar.appendChild(d); }
     container.appendChild(allDayBar);
     const agenda = document.createElement('div'); agenda.className = 'agenda';
-    const rowPx = mobile ? 72 : 80; // per uur - vergroot voor betere leesbaarheid
+    const rowPx = mobile ? 96 : 88; // per uur - grotere blokken voor meer tekst
     agenda.style.cssText = `display:grid;grid-template-columns:60px repeat(${mobile?1:7},1fr);grid-template-rows:repeat(24,${rowPx}px);height:calc(100vh - ${mobile? '150px':'144px'});overflow-y:auto;background:linear-gradient(145deg, #0d1f2d 0%, #162c40 20%, #1e3a56 45%, #285673 75%, #2e6a85 100%);position:relative;-webkit-user-select:none;user-select:none;scroll-behavior:smooth;border-radius:0 0 22px 22px;box-shadow:0 8px 32px 0 rgba(80,180,240,0.13);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);`;
     agenda.tabIndex = 0;
     // Bereken zichtbare datums voor kolommen
