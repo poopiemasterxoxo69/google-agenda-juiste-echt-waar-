@@ -157,7 +157,8 @@
         layer = document.createElement('div');
         layer.className = 'day-layer';
         layer.dataset.dag = String(dagIndex);
-        layer.style.cssText = `grid-column:${colIndex} / ${colIndex+1};grid-row:1 / ${24+1};position:relative;z-index:2;pointer-events:none;`;
+        // z-index laag houden zodat gridlijnen zichtbaar blijven; events zelf krijgen hogere z-index
+        layer.style.cssText = `grid-column:${colIndex} / ${colIndex+1};grid-row:1 / ${24+1};position:relative;z-index:1;pointer-events:none;`;
         agenda.appendChild(layer);
         return layer;
       }
@@ -193,7 +194,7 @@
       });
 
       // Overlap-inrichting per dag: kolommen toewijzen per cluster en renderen in de day-layer
-      const gutterPx = 6;
+      const gutterPx = 6; // match halve-uur lijn insets voor strakke uitlijning
       Object.keys(daySegments).forEach(key => {
         const dagIndex = Number(key);
         const segs = daySegments[key].sort((a,b)=> a.startMin - b.startMin || a.endMin - b.endMin);
@@ -230,15 +231,14 @@
           taak.style.height = ((seg.endMin - seg.startMin) * ppm) + 'px';
           let kleur = '#4285f4'; if (seg.event.colorId && colorMap[seg.event.colorId]) kleur = colorMap[seg.event.colorId];
           taak.style.background = kleur;
-          taak.style.border = '1px solid rgba(255,255,255,0.10)';
+          taak.style.border = 'none';
           taak.style.color = '#ffffff';
           taak.style.borderRadius = '8px';
-          taak.style.padding = '8px 10px';
-          taak.style.boxShadow = '0 1px 2px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.18)';
+          taak.style.padding = '6px 8px';
           const base = mobile ? 14 : 13; const fs = Math.max(10, Math.min(base, base * (((seg.endMin - seg.startMin) * ppm)/ (rowPxOpt*0.8))));
           taak.style.fontSize = fs + 'px';
           taak.style.fontWeight = '500';
-          taak.style.zIndex = 3;
+          taak.style.zIndex = 3; // boven grid en layer
           taak.style.boxSizing = 'border-box';
           taak.style.whiteSpace = 'normal';
           taak.style.wordBreak = 'break-word';
@@ -343,11 +343,11 @@
         } else {
           const idx = mobile ? 0 : (dag-1);
           const isTodayCol = dayDates[idx] && isSameDay(dayDates[idx], new Date());
-          cel.style.cssText = `border-right:1px solid rgba(255,255,255,0.12);border-bottom:1px solid rgba(255,255,255,0.16);position:relative;background:${isTodayCol ? 'rgba(66,133,244,0.12)' : 'rgba(26,44,70,0.18)'};transition:background 0.15s;`;
+          cel.style.cssText = `border-right:1px solid rgba(255,255,255,0.07);border-bottom:1px solid rgba(255,255,255,0.10);position:relative;background:${isTodayCol ? 'rgba(66,133,244,0.10)' : 'rgba(30,50,80,0.13)'};transition:background 0.2s;`;
           cel.className = 'agenda-cel'; cel.dataset.dag = idx; cel.dataset.uur = uur;
           // Half-uur scheidslijn
           const half = document.createElement('div');
-          half.style.cssText = `position:absolute;left:6px;right:6px;top:${rowPx/2}px;height:1px;background:rgba(255,255,255,0.10);`;
+          half.style.cssText = `position:absolute;left:6px;right:6px;top:${rowPx/2}px;height:1px;background:rgba(255,255,255,0.12);`;
           cel.appendChild(half);
         }
         agenda.appendChild(cel);
