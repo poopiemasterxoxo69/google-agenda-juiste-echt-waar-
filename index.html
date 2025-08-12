@@ -547,7 +547,7 @@ button::after, #voegToeButton::after, #herkenButton::after {
   <canvas id="bubble-canvas"></canvas>
   <div id="main-content">
     <div id="profileBox" style="position:fixed;top:20px;right:32px;z-index:1000;"></div>
-    <h1>Agenda Tool36</h1>
+    <h1>Agenda Tool37</h1>
   <div id="g_id_onload"
      data-client_id="YOUR_CLIENT_ID"
      data-callback="handleCredentialResponse"
@@ -1162,7 +1162,13 @@ const outputDiv = document.getElementById('output');
 function showAgendaListView() {
   outputDiv.style.display = 'none';
   agendaListView.style.display = '';
-  renderAgendaList();
+  if (window.AgendaUI && typeof window.AgendaUI.buildAgendaGrid === 'function') {
+    window.AgendaUI.buildAgendaGrid();
+  } else if (typeof window.buildAgendaGrid === 'function') {
+    window.buildAgendaGrid();
+  } else {
+    console.warn('[Agenda] buildAgendaGrid not available');
+  }
 }
 function hideAgendaListView() {
   outputDiv.style.display = '';
@@ -1171,9 +1177,15 @@ function hideAgendaListView() {
 // Focus op toevoegen van nieuwe afspraak
 document.getElementById('inputText').focus();
 
-// Placeholder: renderAgendaList will be implemented in script_tool.js
+// Delegate to AgendaUI week view
 function renderAgendaList() {
-  agendaListView.innerHTML = '<div style="text-align:center;color:#aaa;padding:32px;">Laden...</div>';
+  if (window.AgendaUI && typeof window.AgendaUI.buildAgendaGrid === 'function') {
+    window.AgendaUI.buildAgendaGrid();
+  } else if (typeof window.buildAgendaGrid === 'function') {
+    window.buildAgendaGrid();
+  } else {
+    agendaListView.innerHTML = '<div style="text-align:center;color:#aaa;padding:32px;">Agenda module niet geladen...</div>';
+  }
 }
 </script>
 </body>
