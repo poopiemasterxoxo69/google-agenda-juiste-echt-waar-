@@ -141,7 +141,9 @@
     const currentDay = monday.getDay();
     const diffToMonday = (currentDay === 0 ? -6 : 1) - currentDay;
     const offset = (typeof window.weekOffset === 'number') ? window.weekOffset : 0;
-    const mobile = isMobile();
+    // Prefer a full week view on small screens too unless explicitly disabled
+    const preferWeekOnMobile = (typeof window.preferWeekOnMobile === 'boolean') ? window.preferWeekOnMobile : true;
+    const mobile = isMobile() && !preferWeekOnMobile;
     const dayIndexFromState = typeof window.dayIndexOffset === 'number' ? window.dayIndexOffset : ((new Date().getDay()+6)%7);
     monday.setDate(now.getDate() + diffToMonday + (offset*7));
     monday.setHours(0,0,0,0);
