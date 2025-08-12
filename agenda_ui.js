@@ -180,6 +180,13 @@
             half.style.cssText = `position:absolute;left:0;right:0;top:${y + (rowPxOpt/2)}px;height:1px;background:rgba(255,255,255,0.10);`;
             lines.appendChild(half);
           }
+          // verticale dag-randlijnen
+          const vLeft = document.createElement('div');
+          vLeft.style.cssText = 'position:absolute;top:0;bottom:0;left:0;width:1px;background:rgba(255,255,255,0.10);';
+          lines.appendChild(vLeft);
+          const vRight = document.createElement('div');
+          vRight.style.cssText = 'position:absolute;top:0;bottom:0;right:0;width:1px;background:rgba(255,255,255,0.10);';
+          lines.appendChild(vRight);
           layer.appendChild(lines);
         }
         return layer;
@@ -393,7 +400,9 @@
     // Scroll naar huidige tijd (indien deze week)
     if (!mobile && offset === 0) {
       const nu = new Date();
-      const top = (nu.getHours()*60 + nu.getMinutes());
+      const rowPx = mobile ? 96 : 88; // zelfde als gebruikt in grid-template-rows
+      const ppmDesk = rowPx / 60; // pixels per minuut
+      const top = (nu.getHours()*60 + nu.getMinutes()) * ppmDesk;
       agenda.scrollTop = Math.max(0, top - 120);
       // Tijd-indicator lijn in huidige uurcel
       const dagIndex = (nu.getDay()+6)%7;
@@ -403,7 +412,7 @@
         const line = document.createElement('div');
         line.className = 'now-line';
         line.style.cssText = 'position:absolute;left:0;right:0;height:2px;background:#ea4335;box-shadow:0 0 0 1px #ea4335;z-index:3;';
-        line.style.top = (nu.getMinutes()) + 'px';
+        line.style.top = (nu.getMinutes() * ppmDesk) + 'px';
         cel.appendChild(line);
       }
     }
