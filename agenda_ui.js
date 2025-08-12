@@ -109,6 +109,9 @@
     const mobile = !!options.mobile;
     const visibleDays = mobile ? 1 : 7;
     const dayStartIndex = mobile ? (typeof options.dayIndex === 'number' ? options.dayIndex : ((new Date().getDay()+6)%7)) : 0;
+    // Consistente schaal: pixels per minuut op basis van rijhoogte (rowPx)
+    const rowPxOpt = typeof options.rowPx === 'number' ? options.rowPx : (mobile ? 72 : 80);
+    const ppm = rowPxOpt / 60; // pixels per minuut
     const colorMap = { '1': '#a4bdfc', '2': '#7ae7bf', '3': '#dbadff', '4': '#ff887c', '5': '#fbd75b', '6': '#ffb878', '7': '#46d6db', '8': '#e1e1e1', '9': '#5484ed', '10': '#51b749', '11': '#dc2127' };
     const start = new Date(monday);
     const eind = new Date(monday); eind.setDate(start.getDate()+6); eind.setHours(23,59,59,999);
@@ -146,69 +149,94 @@
         chip.onclick = e => showEventTooltip(event, e.target);
         allDayBar.appendChild(chip);
       });
-      // Grid events per uur
-      const cellEvents = {};
+      // Bouw per uur-cel segmenten met exacte minuut-positie en -duur
+      const cellSegments = {};
       events.filter(e=>e.start.dateTime && e.end.dateTime).forEach(event => {
         const startDate = new Date(event.start.dateTime);
+        const endDate = new Date(event.end.dateTime);
         const dagIndex = (startDate.getDay()+6)%7;
-        // Alleen zichtbare dagen
         if (mobile && (dagIndex < dayStartIndex || dagIndex >= dayStartIndex+visibleDays)) return;
-        const uur = startDate.getHours();
-        const key = `${dagIndex}-${uur}`;
-        if (!cellEvents[key]) cellEvents[key] = [];
-        cellEvents[key].push(event);
+        // Loop door alle betrokken uren en maak per uur een segment
+        let iter = new Date(startDate);
+        while (iter < endDate) {
+          const uur = iter.getHours();
+          const hourStart = new Date(iter); hourStart.setMinutes(0,0,0);
+          const hourEnd = new Date(hourStart); hourEnd.setHours(hourEnd.getHours()+1);
+          const segStartMin = Math.max(0, Math.min(60, Math.round((iter - hourStart)/60000)));
+          const segEndMin = Math.max(0, Math.min(60, Math.round((endDate - hourStart)/60000)));
+          const segDur = Math.max(1, segEndMin - segStartMin); // minstens 1 minuut zichtbaar
+          const key = `${dagIndex}-${uur}`;
+          if (!cellSegments[key]) cellSegments[key] = [];
+          cellSegments[key].push({ event, startMin: segStartMin, endMin: segEndMin, durMin: segDur });
+          iter = hourEnd; // volgende uur
+        }
       });
-      for (const key in cellEvents) {
+      // Plaats per cel, met kolomindeling voor overlappende segmenten
+      for (const key in cellSegments) {
         const [dagIndex, uur] = key.split('-').map(Number);
-        const eventsInCell = cellEvents[key];
-        const n = eventsInCell.length;
-        eventsInCell.forEach((event, i) => {
-          const startDate = new Date(event.start.dateTime);
-          const endDate = new Date(event.end.dateTime);
-          const startMin = startDate.getMinutes();
-          let duration = (endDate - startDate) / 60000; if (duration < 15) duration = 15;
-          const colIndex = mobile ? 0 : dagIndex;
-          const cell = agenda.querySelector(`.agenda-cel[data-dag='${colIndex}'][data-uur='${uur}']`);
-          if (cell) {
-            const taak = document.createElement('div'); taak.className = 'taak'; taak.textContent = event.summary || '(geen titel)';
-            const unit = 54; // px per uur
-            taak.style.position = 'absolute'; taak.style.left = (6 + i*(100/n)) + 'px'; taak.style.width = `calc(${100/n}% - 12px)`; taak.style.top = (6 + (startMin/60)*unit) + 'px'; taak.style.height = (duration/60*unit) + 'px';
-            let kleur = '#4285f4'; if (event.colorId && colorMap[event.colorId]) kleur = colorMap[event.colorId];
-            const gradient = `linear-gradient(180deg, ${kleur} 0%, ${kleur}CC 85%)`;
-            // Stijl voor afspraakblokken zoals in de afbeelding
-            taak.style.background = kleur; // Gebruik effen kleur in plaats van gradient
-            taak.style.border = 'none'; // Geen rand
-            taak.style.color = '#ffffff'; 
-            taak.style.borderRadius = '8px'; // Minder ronde hoeken
-            taak.style.padding = '8px 10px'; 
-            taak.style.fontSize = mobile ? '14px' : '13px'; 
-            taak.style.fontWeight = '500'; // Iets dikkere tekst
-            taak.style.zIndex = 2; 
-            taak.style.boxShadow = 'none'; // Geen schaduw
-            taak.style.whiteSpace = 'normal'; 
-            taak.style.overflow = 'hidden'; // Verberg overflow
-            taak.style.cursor = 'pointer'; 
-            taak.style.minHeight = 'auto'; // Geen vaste minimale hoogte
-            taak.style.lineHeight = '1.2'; 
-            taak.style.wordWrap = 'break-word';
-            taak.style.textShadow = 'none'; // Geen tekstschaduw
-            taak.style.margin = '1px 2px'; // Kleine marge tussen blokken
-            taak.style.display = 'flex';
-            taak.style.alignItems = 'center';
-            taak.style.justifyContent = 'flex-start';
-            // Interaction: on small screens, tap expands to show full content; otherwise show tooltip
-            taak.title = event.summary || '(geen titel)';
-            if (options.smallScreen) {
-              bindGlobalCollapseListener();
-              taak.addEventListener('click', (e)=>{
-                e.stopPropagation();
-                if (taak.dataset.expanded === 'true') collapseTask(taak); else expandTask(taak);
-              });
-            } else {
-              taak.onclick = e => showEventTooltip(event, e.target);
-            }
-            cell.appendChild(taak);
+        const segments = cellSegments[key].sort((a,b)=> a.startMin - b.startMin || a.endMin - b.endMin);
+        // Kolommen toewijzen: eenvoudige greedy allocator
+        const cols = []; // elke kolom bewaart laatst eindMin
+        segments.forEach(seg => {
+          let placedCol = 0;
+          for (let c=0; c<cols.length; c++) { if (cols[c] <= seg.startMin) { placedCol = c; break; } placedCol = cols.length; }
+          if (placedCol === cols.length) cols.push(seg.endMin); else cols[placedCol] = seg.endMin;
+          seg.col = placedCol; seg.colCount = cols.length;
+        });
+        const colIndex = mobile ? 0 : dagIndex;
+        const cell = agenda.querySelector(`.agenda-cel[data-dag='${colIndex}'][data-uur='${uur}']`);
+        if (!cell) continue;
+        const gutterPx = 4; // kleine marge tussen blokken
+        segments.forEach(seg => {
+          const taak = document.createElement('div');
+          taak.className = 'taak';
+          taak.textContent = seg.event.summary || '(geen titel)';
+          // Positie/afmeting exact op basis van minuten
+          const totalGutter = (seg.colCount + 1) * gutterPx;
+          const availWidth = cell.clientWidth ? (cell.clientWidth - totalGutter) : 0; // beste gok; valt terug op % indien 0
+          const widthPct = 100 / seg.colCount;
+          // Gebruik CSS calc zodat layout niet afhankelijk is van clientWidth
+          taak.style.position = 'absolute';
+          taak.style.left = `calc(${widthPct*seg.col}% + ${gutterPx}px)`;
+          taak.style.width = `calc(${widthPct}% - ${gutterPx*2}px)`;
+          taak.style.top = (seg.startMin * ppm) + 'px';
+          taak.style.height = (Math.max(1, seg.durMin) * ppm) + 'px';
+          // Stijl en leesbaarheid
+          let kleur = '#4285f4';
+          if (seg.event.colorId && colorMap[seg.event.colorId]) kleur = colorMap[seg.event.colorId];
+          taak.style.background = kleur;
+          taak.style.border = 'none';
+          taak.style.color = '#ffffff';
+          taak.style.borderRadius = '8px';
+          taak.style.padding = '6px 8px';
+          // Dynamische fontgrootte op basis van hoogte
+          const base = mobile ? 14 : 13;
+          const fs = Math.max(10, Math.min(base, base * (parseFloat(taak.style.height)/ (rowPxOpt*0.8))));
+          taak.style.fontSize = fs + 'px';
+          taak.style.fontWeight = '500';
+          taak.style.zIndex = 2;
+          taak.style.boxShadow = 'none';
+          taak.style.whiteSpace = 'normal';
+          taak.style.overflow = 'hidden';
+          taak.style.boxSizing = 'border-box';
+          taak.style.cursor = 'pointer';
+          taak.style.lineHeight = '1.2';
+          taak.style.wordBreak = 'break-word';
+          taak.style.overflowWrap = 'anywhere';
+          taak.style.textOverflow = 'clip';
+          taak.style.display = 'block'; // altijd linksboven starten
+          // Interactie
+          taak.title = seg.event.summary || '(geen titel)';
+          if (options.smallScreen) {
+            bindGlobalCollapseListener();
+            taak.addEventListener('click', (e)=>{
+              e.stopPropagation();
+              if (taak.dataset.expanded === 'true') collapseTask(taak); else expandTask(taak);
+            });
+          } else {
+            taak.onclick = e => showEventTooltip(seg.event, e.target);
           }
+          cell.appendChild(taak);
         });
       }
     });
@@ -328,7 +356,7 @@
       const nu = new Date();
       const visibleDate = new Date(monday); visibleDate.setDate(monday.getDate()+dayIndexFromState);
       if (isSameDay(nu, visibleDate)) {
-        const top = (nu.getHours()*54 + nu.getMinutes());
+        const top = (nu.getHours()*rowPx + nu.getMinutes() * (rowPx/60));
         agenda.scrollTop = Math.max(0, top - 140);
         const uur = nu.getHours();
         const cel = agenda.querySelector(`.agenda-cel[data-dag='0'][data-uur='${uur}']`);
@@ -336,7 +364,7 @@
           const line = document.createElement('div');
           line.className = 'now-line';
           line.style.cssText = 'position:absolute;left:0;right:0;height:2px;background:#ea4335;box-shadow:0 0 0 1px #ea4335;z-index:3;';
-          line.style.top = (nu.getMinutes()*0.9) + 'px';
+          line.style.top = (nu.getMinutes() * (rowPx/60)) + 'px';
           cel.appendChild(line);
         }
       }
@@ -365,7 +393,7 @@
         touchStartX = null;
       }
     });
-    vulAfsprakenInGrid(agenda, monday, allDayBar, { mobile, dayIndex: dayIndexFromState, smallScreen: isSmallScreen });
+    vulAfsprakenInGrid(agenda, monday, allDayBar, { mobile, dayIndex: dayIndexFromState, smallScreen: isSmallScreen, rowPx });
   }
 
   ns.vulAfsprakenInGrid = vulAfsprakenInGrid; window.vulAfsprakenInGrid = vulAfsprakenInGrid;
