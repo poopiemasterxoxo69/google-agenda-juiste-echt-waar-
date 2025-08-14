@@ -118,6 +118,7 @@
             taak.style.height = heightPx + 'px';
             let kleur = '#4285f4'; if (event.colorId && colorMap[event.colorId]) kleur = colorMap[event.colorId];
             taak.style.background = kleur; taak.style.color = '#fff'; taak.style.borderRadius = '12px'; taak.style.padding = isMobile ? '10px 12px' : '8px 10px'; taak.style.fontSize = '13px'; taak.style.zIndex = 2; taak.style.boxShadow = '0 2px 10px #0005'; taak.style.whiteSpace = 'normal'; taak.style.overflow = 'hidden'; taak.style.wordBreak = 'break-word'; taak.style.cursor = 'pointer'; taak.style.minHeight = isMobile ? '48px' : '42px'; taak.style.boxSizing = 'border-box';
+            taak.style.background = kleur; taak.style.color = '#fff'; taak.style.borderRadius = '12px'; taak.style.padding = isMobile ? '10px 12px' : '8px 10px'; taak.style.fontSize = '13px'; taak.style.zIndex = 2; taak.style.boxShadow = '0 2px 10px #0005'; taak.style.whiteSpace = 'normal'; taak.style.overflow = 'hidden'; taak.style.wordBreak = 'break-word'; taak.style.textAlign = 'left'; taak.style.cursor = 'pointer'; taak.style.minHeight = isMobile ? '48px' : '42px'; taak.style.boxSizing = 'border-box';
             taak.onclick = e => showEventTooltip(event, e.target);
             cell.appendChild(taak);
           }
@@ -240,7 +241,7 @@
         const preview = document.createElement('div');
         preview.className = 'taak preview';
         preview.textContent = (a.titel || 'Voorbeeld');
-        preview.style.cssText = `position:absolute;left:0;right:0;top:${(minutes/60)*pixelsPerHour}px;height:${(duur/60)*pixelsPerHour}px;background:transparent;border:2px dashed #8fd3fe;color:#cdefff;border-radius:12px;padding:${isMobile?'10px 12px':'8px 10px'};font-size:13px;z-index:3;pointer-events:none;box-sizing:border-box;white-space:normal;word-break:break-word;overflow:hidden;`;
+        preview.style.cssText = `position:absolute;left:0;right:0;top:${(minutes/60)*pixelsPerHour}px;height:${(duur/60)*pixelsPerHour}px;background:transparent;border:2px dashed #8fd3fe;color:#cdefff;border-radius:12px;padding:${isMobile?'10px 12px':'8px 10px'};font-size:13px;z-index:3;pointer-events:none;box-sizing:border-box;white-space:normal;word-break:break-word;overflow:hidden;text-align:left;`;
         // Auto-remove na paar seconden
         setTimeout(()=>{ preview.remove(); }, 4000);
         cell.appendChild(preview);
