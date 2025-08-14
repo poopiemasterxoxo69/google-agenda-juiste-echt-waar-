@@ -52,6 +52,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
   if (navAfspraak) navAfspraak.addEventListener('click', showAfspraakMaken);
   if (navAgenda) navAgenda.addEventListener('click', showAgenda);
+  // Expose globally for programmatic open from buttons
+  window.showAgenda = showAgenda;
   // Start met afspraak-maken scherm
   showAfspraakMaken();
 });

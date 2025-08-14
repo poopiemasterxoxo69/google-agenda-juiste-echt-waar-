@@ -547,7 +547,7 @@ button::after, #voegToeButton::after, #herkenButton::after {
   <canvas id="bubble-canvas"></canvas>
   <div id="main-content">
     <div id="profileBox" style="position:fixed;top:20px;right:32px;z-index:1000;"></div>
-    <h1>Agenda Tool62</h1>
+    <h1>Agenda Tool63</h1>
   <div id="g_id_onload"
      data-client_id="YOUR_CLIENT_ID"
      data-callback="handleCredentialResponse"
@@ -1131,6 +1131,29 @@ function herkenMetSpinner() {
   <script src="script_tool.js"></script>
   <script src="agenda_ui.js"></script>
   <script src="form_ui.js"></script>
+  <script>
+    // Voeg een preview knop toe zodra DOM klaar is, naast de bestaande actieknoppen
+    document.addEventListener('DOMContentLoaded', function(){
+      try{
+        const container = document.getElementById('output') || document.body;
+        if (!document.getElementById('previewAgendaBtn')) {
+          const btn = document.createElement('button');
+          btn.id = 'previewAgendaBtn';
+          btn.textContent = '👁️ Voorbeeld in agenda';
+          btn.style.marginTop = '8px';
+          btn.addEventListener('click', function(){
+            if (window.showAgenda) window.showAgenda();
+            if (window.AgendaUI && typeof window.AgendaUI.previewEventFromForm === 'function') {
+              window.AgendaUI.previewEventFromForm();
+            } else if (window.previewEventFromForm) {
+              window.previewEventFromForm();
+            }
+          });
+          container.appendChild(btn);
+        }
+      }catch(e){ console.warn('Kon preview-knop niet plaatsen:', e); }
+    });
+  </script>
   <script src="events_api.js"></script>
   <script src="manual_plus.js"></script>
 
@@ -1188,5 +1211,9 @@ function renderAgendaList() {
   }
 }
 </script>
-</body>
+  <!-- Agenda overlay host -->
+  <div id="agendaView" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:transparent;z-index:1001;overflow-y:auto;overflow-x:hidden;">
+    <div id="weekAgendaContainer" style="max-width:1024px;margin:0 auto;padding:12px;"></div>
+  </div>
+  </body>
 </html>
