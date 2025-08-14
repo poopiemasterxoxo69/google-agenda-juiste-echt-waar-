@@ -181,14 +181,15 @@
             lines.appendChild(half);
           }
           // verticale lijnen: linker- en rechterrand + middenlijn voor visuele houvast
+          // Vertikale lijnen onder de dag-datum verbergen op verzoek
           const vLeft = document.createElement('div');
-          vLeft.style.cssText = 'position:absolute;top:0;bottom:0;left:0;width:1px;background:rgba(255,255,255,0.14);';
+          vLeft.style.cssText = 'display:none;';
           lines.appendChild(vLeft);
           const vRight = document.createElement('div');
-          vRight.style.cssText = 'position:absolute;top:0;bottom:0;right:0;width:1px;background:rgba(255,255,255,0.14);';
+          vRight.style.cssText = 'display:none;';
           lines.appendChild(vRight);
           const vMid = document.createElement('div');
-          vMid.style.cssText = 'position:absolute;top:0;bottom:0;left:50%;width:1px;transform:translateX(-0.5px);background:rgba(255,255,255,0.12);';
+          vMid.style.cssText = 'display:none;';
           lines.appendChild(vMid);
           layer.appendChild(lines);
         }
@@ -382,11 +383,13 @@
         const cel = document.createElement('div');
         if (dag===0) {
           cel.textContent = (uur<10?'0':'')+uur+':00';
-          cel.style.cssText = `color:#b7dfff;font-size:${mobile?'0.95em':'1em'};display:flex;align-items:center;justify-content:center;border-right:1px solid rgba(255,255,255,0.08);background:rgba(30,50,80,0.22);touch-action:none;-webkit-user-select:none;user-select:none;`;
+          // Geen verticale lijn tussen tijdkolom en dagen
+          cel.style.cssText = `color:#b7dfff;font-size:${mobile?'0.95em':'1em'};display:flex;align-items:center;justify-content:center;background:rgba(30,50,80,0.22);touch-action:none;-webkit-user-select:none;user-select:none;`;
         } else {
           const idx = mobile ? 0 : (dag-1);
           const isTodayCol = dayDates[idx] && isSameDay(dayDates[idx], new Date());
-          cel.style.cssText = `border-right:1px solid rgba(255,255,255,0.07);border-bottom:1px solid rgba(255,255,255,0.10);position:relative;background:${isTodayCol ? 'rgba(66,133,244,0.10)' : 'rgba(30,50,80,0.13)'};transition:background 0.2s;`;
+          // Geen verticale scheidslijn tussen dagen
+          cel.style.cssText = `border-bottom:1px solid rgba(255,255,255,0.10);position:relative;background:${isTodayCol ? 'rgba(66,133,244,0.10)' : 'rgba(30,50,80,0.13)'};transition:background 0.2s;`;
           cel.className = 'agenda-cel'; cel.dataset.dag = idx; cel.dataset.uur = uur;
           // Half-uur scheidslijn
           const half = document.createElement('div');
