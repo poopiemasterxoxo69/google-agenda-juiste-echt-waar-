@@ -74,9 +74,9 @@
         if (cel) {
           const chip = document.createElement('div'); chip.className = 'allday-chip'; chip.textContent = event.summary || '(geen titel)';
           const isMobile = window.matchMedia && window.matchMedia('(max-width: 480px)').matches;
-          const chipFont = isMobile ? 14 : 15;
-          const chipMinH = isMobile ? 44 : 42;
-          chip.style.cssText = `display:inline-block;max-width:92%;padding:${isMobile? '8px 12px':'8px 14px'};margin:4px 4px 4px 0;background:${event.colorId&&colorMap[event.colorId]?colorMap[event.colorId]:'#4285f4'};color:#fff;font-size:${chipFont}px;border-radius:16px;box-shadow:0 2px 10px #0004;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:${chipMinH}px;`;
+          const chipFont = isMobile ? 16 : 15;
+          const chipMinH = isMobile ? 48 : 42;
+          chip.style.cssText = `display:inline-block;max-width:90%;padding:${isMobile? '10px 16px':'8px 14px'};margin:4px 4px 4px 0;background:${event.colorId&&colorMap[event.colorId]?colorMap[event.colorId]:'#4285f4'};color:#fff;font-size:${chipFont}px;border-radius:16px;box-shadow:0 2px 10px #0004;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:${chipMinH}px;`;
           chip.onclick = e => showEventTooltip(event, e.target);
           cel.appendChild(chip);
         }
@@ -104,13 +104,20 @@
           if (cell) {
             const taak = document.createElement('div'); taak.className = 'taak'; taak.textContent = event.summary || '(geen titel)';
             const isMobile = window.matchMedia && window.matchMedia('(max-width: 480px)').matches;
-            const topPx = 6 + (startMin/60)*pixelsPerHour;
+            const topPx = (startMin/60)*pixelsPerHour;
             const heightPx = (duration/60)*pixelsPerHour;
-            const sideGutter = isMobile ? 4 : 6;
-            const totalSub = isMobile ? 8 : 12;
-            taak.style.position = 'absolute'; taak.style.left = (sideGutter + i*(100/n)) + 'px'; taak.style.width = `calc(${100/n}% - ${totalSub}px)`; taak.style.top = topPx + 'px'; taak.style.height = heightPx + 'px';
+            taak.style.position = 'absolute';
+            if (n === 1) {
+              taak.style.left = '0';
+              taak.style.width = '100%';
+            } else {
+              taak.style.left = `calc(${(100*i)/n}%)`;
+              taak.style.width = `calc(${100/n}% - 2px)`; // kleine rand voor borders
+            }
+            taak.style.top = topPx + 'px';
+            taak.style.height = heightPx + 'px';
             let kleur = '#4285f4'; if (event.colorId && colorMap[event.colorId]) kleur = colorMap[event.colorId];
-            taak.style.background = kleur; taak.style.color = '#fff'; taak.style.borderRadius = '12px'; taak.style.padding = isMobile ? '6px 8px' : '8px 10px'; taak.style.fontSize = isMobile ? '14px' : '15px'; taak.style.zIndex = 2; taak.style.boxShadow = '0 2px 10px #0005'; taak.style.whiteSpace = 'nowrap'; taak.style.overflow = 'hidden'; taak.style.textOverflow = 'ellipsis'; taak.style.cursor = 'pointer'; taak.style.minHeight = isMobile ? '44px' : '42px';
+            taak.style.background = kleur; taak.style.color = '#fff'; taak.style.borderRadius = '12px'; taak.style.padding = isMobile ? '10px 12px' : '8px 10px'; taak.style.fontSize = isMobile ? '16px' : '15px'; taak.style.zIndex = 2; taak.style.boxShadow = '0 2px 10px #0005'; taak.style.whiteSpace = 'nowrap'; taak.style.overflow = 'hidden'; taak.style.textOverflow = 'ellipsis'; taak.style.cursor = 'pointer'; taak.style.minHeight = isMobile ? '48px' : '42px'; taak.style.boxSizing = 'border-box';
             taak.onclick = e => showEventTooltip(event, e.target);
             cell.appendChild(taak);
           }
@@ -124,7 +131,6 @@
     container.innerHTML = '';
     const isMobile = window.matchMedia && window.matchMedia('(max-width: 480px)').matches;
     const pixelsPerHour = isMobile ? 84 : 60; // vergroot blokken op mobiel
-    const timeCol = isMobile ? 48 : 60;
     const now = new Date();
     const monday = new Date(now);
     const currentDay = monday.getDay();
@@ -143,7 +149,7 @@
     header.appendChild(weekText); header.appendChild(klok); container.appendChild(header);
     updateRealtimeClock();
     const datumBar = document.createElement('div'); datumBar.className = 'datum-bar';
-    datumBar.style.cssText = `display:grid;grid-template-columns:${timeCol}px repeat(7,1fr);height:${isMobile?48:42}px;background:rgba(30,50,80,0.55);color:#cdefff;font-size:${isMobile?'1.05em':'1em'};align-items:center;border-bottom:1.5px solid rgba(255,255,255,0.10);position:sticky;top:${isMobile?56:48}px;z-index:10;touch-action:none;-webkit-user-select:none;user-select:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);`;
+    datumBar.style.cssText = `display:grid;grid-template-columns:60px repeat(7,1fr);height:${isMobile?48:42}px;background:rgba(30,50,80,0.55);color:#cdefff;font-size:${isMobile?'1.05em':'1em'};align-items:center;border-bottom:1.5px solid rgba(255,255,255,0.10);position:sticky;top:${isMobile?56:48}px;z-index:10;touch-action:none;-webkit-user-select:none;user-select:none;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);`;
     datumBar.appendChild(document.createElement('div'));
     const dagen = ['Ma','Di','Wo','Do','Vr','Za','Zo'];
     for (let i=0; i<7; ++i) {
@@ -155,12 +161,12 @@
     }
     container.appendChild(datumBar);
     const allDayBar = document.createElement('div'); allDayBar.className = 'allday-bar';
-    allDayBar.style.cssText = `display:grid;grid-template-columns:${timeCol}px repeat(7,1fr);height:${isMobile?44:36}px;align-items:center;background:rgba(30,50,80,0.42);border-bottom:1.5px solid rgba(255,255,255,0.08);overflow-x:auto;white-space:nowrap;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);`;
+    allDayBar.style.cssText = `display:grid;grid-template-columns:60px repeat(7,1fr);height:${isMobile?44:36}px;align-items:center;background:rgba(30,50,80,0.42);border-bottom:1.5px solid rgba(255,255,255,0.08);overflow-x:auto;white-space:nowrap;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);`;
     allDayBar.appendChild(document.createElement('div'));
     for (let i=0; i<7; ++i) { const d = document.createElement('div'); d.className = 'allday-cel'; d.style.cssText = `position:relative;height:${isMobile?44:36}px;`; allDayBar.appendChild(d); }
     container.appendChild(allDayBar);
     const agenda = document.createElement('div'); agenda.className = 'agenda';
-    agenda.style.cssText = `display:grid;grid-template-columns:${timeCol}px repeat(7,1fr);grid-template-rows:repeat(24,${pixelsPerHour}px);height:calc(100vh - ${isMobile? (56+48+44):144}px);overflow-y:auto;background:linear-gradient(145deg, #0d1f2d 0%, #162c40 20%, #1e3a56 45%, #285673 75%, #2e6a85 100%);position:relative;-webkit-user-select:none;user-select:none;scroll-behavior:smooth;border-radius:0 0 22px 22px;box-shadow:0 8px 32px 0 rgba(80,180,240,0.13);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);`;
+    agenda.style.cssText = `display:grid;grid-template-columns:60px repeat(7,1fr);grid-template-rows:repeat(24,${pixelsPerHour}px);height:calc(100vh - ${isMobile? (56+48+44):144}px);overflow-y:auto;background:linear-gradient(145deg, #0d1f2d 0%, #162c40 20%, #1e3a56 45%, #285673 75%, #2e6a85 100%);position:relative;-webkit-user-select:none;user-select:none;scroll-behavior:smooth;border-radius:0 0 22px 22px;box-shadow:0 8px 32px 0 rgba(80,180,240,0.13);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);`;
     agenda.tabIndex = 0;
     for (let uur=0; uur<24; ++uur) {
       for (let dag=0; dag<8; ++dag) {
@@ -234,7 +240,7 @@
         const preview = document.createElement('div');
         preview.className = 'taak preview';
         preview.textContent = (a.titel || 'Voorbeeld');
-        preview.style.cssText = `position:absolute;left:6px;right:6px;top:${6 + (minutes/60)*pixelsPerHour}px;height:${(duur/60)*pixelsPerHour}px;background:transparent;border:2px dashed #8fd3fe;color:#cdefff;border-radius:12px;padding:${isMobile?'10px 12px':'8px 10px'};font-size:${isMobile?'16px':'15px'};z-index:3;pointer-events:none;`;
+        preview.style.cssText = `position:absolute;left:0;right:0;top:${(minutes/60)*pixelsPerHour}px;height:${(duur/60)*pixelsPerHour}px;background:transparent;border:2px dashed #8fd3fe;color:#cdefff;border-radius:12px;padding:${isMobile?'10px 12px':'8px 10px'};font-size:${isMobile?'16px':'15px'};z-index:3;pointer-events:none;box-sizing:border-box;`;
         // Auto-remove na paar seconden
         setTimeout(()=>{ preview.remove(); }, 4000);
         cell.appendChild(preview);
