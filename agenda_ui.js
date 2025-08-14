@@ -181,14 +181,15 @@
             lines.appendChild(half);
           }
           // verticale lijnen: linker- en rechterrand + middenlijn voor visuele houvast
-          // Vertikale lijnen onder de dag-datum verbergen op verzoek
+          // Verticale scheidslijnen per dagkolom voor duidelijke dag-splitsing
           const vLeft = document.createElement('div');
-          vLeft.style.cssText = 'display:none;';
+          vLeft.style.cssText = 'position:absolute;top:0;bottom:0;left:0;width:1px;background:rgba(255,255,255,0.16);';
           lines.appendChild(vLeft);
           const vRight = document.createElement('div');
-          vRight.style.cssText = 'display:none;';
+          vRight.style.cssText = 'position:absolute;top:0;bottom:0;right:0;width:1px;background:rgba(255,255,255,0.16);';
           lines.appendChild(vRight);
           const vMid = document.createElement('div');
+          // Middenlijn uitgeschakeld om visuele ruis te vermijden
           vMid.style.cssText = 'display:none;';
           lines.appendChild(vMid);
           layer.appendChild(lines);
@@ -388,8 +389,8 @@
         } else {
           const idx = mobile ? 0 : (dag-1);
           const isTodayCol = dayDates[idx] && isSameDay(dayDates[idx], new Date());
-          // Geen verticale scheidslijn tussen dagen
-          cel.style.cssText = `border-bottom:1px solid rgba(255,255,255,0.10);position:relative;background:${isTodayCol ? 'rgba(66,133,244,0.10)' : 'rgba(30,50,80,0.13)'};transition:background 0.2s;`;
+          // Herstel verticale scheidslijn tussen dagen voor duidelijke dag-splitsing
+          cel.style.cssText = `border-right:1px solid rgba(255,255,255,0.15);border-bottom:1px solid rgba(255,255,255,0.10);position:relative;background:${isTodayCol ? 'rgba(66,133,244,0.10)' : 'rgba(30,50,80,0.13)'};transition:background 0.2s;`;
           cel.className = 'agenda-cel'; cel.dataset.dag = idx; cel.dataset.uur = uur;
           // Half-uur scheidslijn
           const half = document.createElement('div');
