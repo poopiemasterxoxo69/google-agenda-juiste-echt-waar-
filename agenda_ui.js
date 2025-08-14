@@ -202,7 +202,7 @@
       events.filter(e=>e.start.dateTime && e.end.dateTime).forEach(event => {
         let s = new Date(event.start.dateTime);
         let e = new Date(event.end.dateTime);
-        // Normalize ms
+        // Normaliseer naar minuut-nauwkeurigheid (lokale tijd) en voorkom timezone/DST drift
         s = new Date(s.getFullYear(), s.getMonth(), s.getDate(), s.getHours(), s.getMinutes(), 0, 0);
         e = new Date(e.getFullYear(), e.getMonth(), e.getDate(), e.getHours(), e.getMinutes(), 0, 0);
         let iter = new Date(s);
@@ -213,8 +213,13 @@
             const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate()+1);
             const segStart = new Date(Math.max(iter, dayStart));
             const segEnd = new Date(Math.min(e, dayEnd));
-            const startMin = Math.max(0, Math.min(1440, Math.round((segStart - dayStart)/60000)));
-            const endMin = Math.max(0, Math.min(1440, Math.round((segEnd - dayStart)/60000)));
+            // Bereken minuten via locale uren/minuten i.p.v. epoch-diff om DST-afwijkingen te vermijden
+            let startMin = segStart.getHours()*60 + segStart.getMinutes();
+            let endMin = segEnd.getHours()*60 + segEnd.getMinutes();
+            // Als segEnd precies middernacht is van de volgende dag, behandel als 1440
+            if (segEnd.getTime() === dayEnd.getTime()) endMin = 1440;
+            startMin = Math.max(0, Math.min(1440, startMin));
+            endMin = Math.max(0, Math.min(1440, endMin));
             if (endMin > startMin) {
               const key = String(dagIndex);
               if (!daySegments[key]) daySegments[key] = [];
