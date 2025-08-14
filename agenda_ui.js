@@ -117,7 +117,6 @@
             taak.style.top = topPx + 'px';
             taak.style.height = heightPx + 'px';
             let kleur = '#4285f4'; if (event.colorId && colorMap[event.colorId]) kleur = colorMap[event.colorId];
-            taak.style.background = kleur; taak.style.color = '#fff'; taak.style.borderRadius = '12px'; taak.style.padding = isMobile ? '10px 12px' : '8px 10px'; taak.style.fontSize = '13px'; taak.style.zIndex = 2; taak.style.boxShadow = '0 2px 10px #0005'; taak.style.whiteSpace = 'normal'; taak.style.overflow = 'hidden'; taak.style.wordBreak = 'break-word'; taak.style.cursor = 'pointer'; taak.style.minHeight = isMobile ? '48px' : '42px'; taak.style.boxSizing = 'border-box';
             taak.style.background = kleur; taak.style.color = '#fff'; taak.style.borderRadius = '12px'; taak.style.padding = isMobile ? '10px 12px' : '8px 10px'; taak.style.fontSize = '13px'; taak.style.zIndex = 2; taak.style.boxShadow = '0 2px 10px #0005'; taak.style.whiteSpace = 'normal'; taak.style.overflow = 'hidden'; taak.style.wordBreak = 'break-word'; taak.style.textAlign = 'left'; taak.style.cursor = 'pointer'; taak.style.minHeight = isMobile ? '48px' : '42px'; taak.style.boxSizing = 'border-box';
             taak.onclick = e => showEventTooltip(event, e.target);
             cell.appendChild(taak);
