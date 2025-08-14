@@ -173,22 +173,22 @@
           for (let uur=0; uur<24; uur++) {
             const y = uur * rowPxOpt;
             const hour = document.createElement('div');
-            hour.style.cssText = `position:absolute;left:0;right:0;top:${y}px;height:1px;background:rgba(255,255,255,0.12);`;
+            hour.style.cssText = `position:absolute;left:0;right:0;top:${y}px;height:1px;background:rgba(255,255,255,0.18);`;
             lines.appendChild(hour);
             // half uur
             const half = document.createElement('div');
-            half.style.cssText = `position:absolute;left:0;right:0;top:${y + (rowPxOpt/2)}px;height:1px;background:rgba(255,255,255,0.10);`;
+            half.style.cssText = `position:absolute;left:0;right:0;top:${y + (rowPxOpt/2)}px;height:1px;background:rgba(255,255,255,0.14);`;
             lines.appendChild(half);
           }
           // verticale lijnen: linker- en rechterrand + middenlijn voor visuele houvast
           const vLeft = document.createElement('div');
-          vLeft.style.cssText = 'position:absolute;top:0;bottom:0;left:0;width:1px;background:rgba(255,255,255,0.10);';
+          vLeft.style.cssText = 'position:absolute;top:0;bottom:0;left:0;width:1px;background:rgba(255,255,255,0.14);';
           lines.appendChild(vLeft);
           const vRight = document.createElement('div');
-          vRight.style.cssText = 'position:absolute;top:0;bottom:0;right:0;width:1px;background:rgba(255,255,255,0.10);';
+          vRight.style.cssText = 'position:absolute;top:0;bottom:0;right:0;width:1px;background:rgba(255,255,255,0.14);';
           lines.appendChild(vRight);
           const vMid = document.createElement('div');
-          vMid.style.cssText = 'position:absolute;top:0;bottom:0;left:50%;width:1px;transform:translateX(-0.5px);background:rgba(255,255,255,0.08);';
+          vMid.style.cssText = 'position:absolute;top:0;bottom:0;left:50%;width:1px;transform:translateX(-0.5px);background:rgba(255,255,255,0.12);';
           lines.appendChild(vMid);
           layer.appendChild(lines);
         }
@@ -372,7 +372,7 @@
     container.appendChild(allDayBar);
     const agenda = document.createElement('div'); agenda.className = 'agenda';
     const rowPx = mobile ? 96 : 88; // per uur - grotere blokken voor meer tekst
-    agenda.style.cssText = `display:grid;grid-template-columns:60px repeat(${mobile?1:7},1fr);grid-template-rows:repeat(24,${rowPx}px);height:calc(100vh - ${mobile? '150px':'144px'});overflow-y:auto;background:linear-gradient(145deg, #0d1f2d 0%, #162c40 20%, #1e3a56 45%, #285673 75%, #2e6a85 100%);position:relative;-webkit-user-select:none;user-select:none;scroll-behavior:smooth;border-radius:0 0 22px 22px;box-shadow:0 8px 32px 0 rgba(80,180,240,0.13);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);`;
+    agenda.style.cssText = `display:grid;grid-template-columns:60px repeat(${mobile?1:7},1fr);grid-template-rows:repeat(24,${rowPx}px);height:calc(100vh - ${mobile? '150px':'144px'});overflow-y:auto;background:linear-gradient(145deg, #0d1f2d 0%, #162c40 20%, #1e3a56 45%, #285673 75%, #2e6a85 100%);position:relative;-webkit-user-select:none;user-select:none;scroll-behavior:smooth;border-radius:0 0 22px 22px;box-shadow:0 8px 32px 0 rgba(80,180,240,0.13);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding-bottom:120px;`;
     agenda.tabIndex = 0;
     // Bereken zichtbare datums voor kolommen
     const dayDates = [];
@@ -390,7 +390,7 @@
           cel.className = 'agenda-cel'; cel.dataset.dag = idx; cel.dataset.uur = uur;
           // Half-uur scheidslijn
           const half = document.createElement('div');
-          half.style.cssText = `position:absolute;left:6px;right:6px;top:${rowPx/2}px;height:1px;background:rgba(255,255,255,0.12);`;
+          half.style.cssText = `position:absolute;left:6px;right:6px;top:${rowPx/2}px;height:1px;background:rgba(255,255,255,0.16);`;
           cel.appendChild(half);
         }
         agenda.appendChild(cel);
@@ -440,7 +440,7 @@
       if (touchStartX!==null && e.changedTouches.length===1) {
         const dx = e.changedTouches[0].clientX - touchStartX;
         if (Math.abs(dx)>40) {
-          agenda.style.transition = 'background 0.2s'; agenda.style.background = '#222'; setTimeout(()=>{agenda.style.background='#181818';}, 220);
+          // Swipe-navigatie zonder achtergrondkleur te wijzigen
           if (mobile) {
             // Dagstap
             const dir = dx < 0 ? 1 : -1;
